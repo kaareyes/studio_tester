@@ -55,6 +55,26 @@ class Updater(unittest.TestCase):
         self.assertFalse(r["available"])
         self.assertIn("online", r["error"])
 
+    def test_check_asks_the_api_first_and_falls_back_to_raw(self):
+        asked = []
+        def api_ok(url, timeout=0):
+            asked.append(url)
+            return b'{"version": "1.2.0"}'
+        r = updater.check(root=install("1.0.0"), fetcher=api_ok)
+        self.assertIn("api.github.com", asked[0])
+        self.assertEqual(len(asked), 1)                                   # answered by the API: raw is not needed
+        self.assertTrue(r["available"])
+        asked.clear()
+        def api_down(url, timeout=0):
+            asked.append(url)
+            if "api.github.com" in url:
+                raise OSError("rate limited")
+            return b'{"version": "1.3.0"}'
+        r = updater.check(root=install("1.0.0"), fetcher=api_down)
+        self.assertEqual(len(asked), 2)
+        self.assertIn("raw.githubusercontent.com", asked[1])
+        self.assertEqual(r["latest"], "1.3.0")
+
     def test_apply_replaces_code_and_keeps_data(self):
         root = install()
         result = updater.apply(root=root, fetcher=lambda url, timeout=0: make_zip(NEW), test=lambda r: (True, ""))

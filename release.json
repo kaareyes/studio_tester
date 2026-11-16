@@ -1,5 +1,5 @@
 {
- "version": "1.0.1",
- "notes": "Collect: choose first 10 / 20 / 50 / all projects (no more endless scrolling)",
+ "version": "1.0.2",
+ "notes": "Update check is immediate (no 5-minute wait), check again link; Collect first 10/20/50/all projects",
  "min_build": ""
 }

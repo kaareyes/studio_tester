@@ -49,11 +49,14 @@ def newer(remote, local):
 def urls(repo=None, branch=BRANCH):
     repo = repo or DEFAULT_REPO
     return {"info": f"https://raw.githubusercontent.com/{repo}/{branch}/release.json",
+            # GitHub's API answers with the CURRENT file (cached 60 s); raw.githubusercontent.com keeps a file for 5 minutes, so a new
+            # release would show up late. The API is asked first, raw is the fallback (the API allows 60 anonymous calls an hour).
+            "api": f"https://api.github.com/repos/{repo}/contents/release.json?ref={branch}",
             "zip": f"https://github.com/{repo}/archive/refs/heads/{branch}.zip"}
 
 
 def fetch(url, timeout=TIMEOUT):
-    request = urllib.request.Request(url, headers={"User-Agent": "studio-tester-updater"})
+    request = urllib.request.Request(url, headers={"User-Agent": "studio-tester-updater", "Accept": "application/vnd.github.raw"})
     with urllib.request.urlopen(request, timeout=timeout) as response:
         return response.read()
 
@@ -62,12 +65,18 @@ def check(repo=None, root=None, fetcher=fetch, branch=BRANCH):
     """What the page shows. Never raises: a failure becomes a plain sentence."""
     here = local_version(root)
     result = {"current": here, "latest": None, "available": False, "notes": "", "min_build": "", "error": None}
-    try:
-        info = json.loads(fetcher(urls(repo, branch)["info"]).decode())
-        result.update(latest=str(info.get("version", "")), notes=str(info.get("notes", ""))[:2000], min_build=str(info.get("min_build", "")))
-        result["available"] = bool(result["latest"]) and newer(result["latest"], here)
-    except Exception as error:
+    info, error = None, None
+    for url in (urls(repo, branch)["api"], urls(repo, branch)["info"]):        # the API first (current), raw as the fallback
+        try:
+            info = json.loads(fetcher(url).decode())
+            break
+        except Exception as problem:
+            error = problem
+    if info is None:
         result["error"] = f"Could not check for updates ({type(error).__name__}). Is this Mac online?"
+        return result
+    result.update(latest=str(info.get("version", "")), notes=str(info.get("notes", ""))[:2000], min_build=str(info.get("min_build", "")))
+    result["available"] = bool(result["latest"]) and newer(result["latest"], here)
     return result
 
 

@@ -160,7 +160,7 @@ function preset(k){active=k;const v=PRESETS[k][2];$('suite').value=v.suite;$('au
 function suiteChanged(){$('suiteText').textContent=info.suites&&info.suites[$('suite').value]?info.suites[$('suite').value][1]:'';estimate();}
 async function checkUpdate(){const u=await (await fetch('/api/update')).json();$('ver').textContent='version '+u.current;
  if(u.available){$('upd').innerHTML=`Update available: <b>${u.latest}</b> ${u.notes?'('+u.notes+')':''} <button class="small" style="background:#e08a00" onclick="applyUpdate()">Update now</button>`;}
- else if(u.error){$('upd').textContent=u.error;}else{$('upd').textContent='Up to date';}}
+ else if(u.error){$('upd').textContent=u.error;}else{$('upd').innerHTML='Up to date <a href="#" onclick="checkUpdate();return false" style="color:#cfe">check again</a>';}}
 async function applyUpdate(){if(!confirm('Update the tester now? It restarts by itself and keeps your catalog, settings and reports.'))return;$('upd').textContent='Updating...';
  const r=await (await fetch('/api/update/apply',{method:'POST',body:'{}'})).json();$('upd').textContent=r.message;if(r.ok){setTimeout(()=>location.reload(),6000);}}
 async function load(){checkUpdate();info=await (await fetch('/api/info')).json();
@@ -224,7 +224,7 @@ async function tick2(){appsList();
  $('report').innerHTML=s.finished?`<a href="/reports/${s.folder}/report.html" target="_blank">Open the report</a> &nbsp; <button class="small" onclick="copyReport('${s.folder}')">Copy report for developers</button>`:'';
  $('again').style.display=(s.finished&&lastSeed)?'inline-block':'none';$('start').disabled=running;}
 async function copyReport(f){const t=await (await fetch('/reports/'+f+'/results.json')).text();await navigator.clipboard.writeText(t);alert('Copied. Paste it in the message to the developers.');}
-load();setInterval(tick2,1000);
+load();setInterval(tick2,1000);setInterval(checkUpdate,300000);
 </script></body></html>"""
 
 
