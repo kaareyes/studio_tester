@@ -63,7 +63,9 @@ Raise `tester.runner.Skip("why")` when the test cannot run on this Mac. Any othe
 ## Status
 
 Suites on the page: **Build check**, **Smoke**, **Explore**, **Realistic**, **Chaos**, **Recovery**, **Network**, **Offline load**,
-**Long video**, **Soak**, **Friday scope**. The unit tests of the tester itself: `.venv/bin/python -m unittest discover -s tests -t .`
+**Long video**, **Soak**, **Friday scope**, **Code checks** (developers).
+
+**Coverage:** [`COVERAGE.md`](COVERAGE.md) lists every test asset made for Studio (scripts, scenarios, fault presets, Swift test files) and where this tester covers it. The Studio rule: a new test is also put in the tester, and `python3 scripts/check_tester_coverage.py` (in the Studio repository) fails when one is missing. The unit tests of the tester itself: `.venv/bin/python -m unittest discover -s tests -t .`
 (43 tests: name matching, take lengths, data-integrity check, catalog, page server, driver steps).
 
 **What has NOT been run against the real app yet:** the Collect step and the Realistic, Chaos, Recovery, Network, Offline load,

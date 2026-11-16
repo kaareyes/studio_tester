@@ -99,7 +99,7 @@ from .page import PAGE  # noqa: E402  (the page lives in page.py)
 
 
 KIND_LABEL = {"test": "Test", "develop": "Develop", "staging": "Staging", "production": "Production"}
-READ_ONLY_SUITES = {"build_check", "smoke", "explore"}      # these only look; every other suite records and needs the Test build's test tools
+READ_ONLY_SUITES = {"build_check", "smoke", "explore", "checks"}      # these only look; every other suite records and needs the Test build's test tools
 chosen = {"path": None}
 
 

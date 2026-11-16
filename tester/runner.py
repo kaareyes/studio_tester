@@ -9,7 +9,7 @@ import threading
 import time
 import traceback
 
-from . import cameras, control
+from . import awake, cameras, control
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPORTS = os.path.join(ROOT, "reports")
@@ -145,6 +145,7 @@ class Run:
         self.lines = []
         self.thread = None
         self.shared_zip = None
+        self.caffeinate = None
 
     def log(self, text):
         self.lines.append(datetime.datetime.now().strftime("%H:%M:%S ") + text)
@@ -158,6 +159,8 @@ class Run:
         context = Context(self.build_path, self.camera, self.run_dir, self.log, self.options)
         context.stop = lambda: self.stop_requested
         control.begin(threading.current_thread())          # pause / cancel apply to this thread only
+        self.caffeinate = awake.start()                    # the Mac must not go to sleep during the run
+        self.log("keeping the Mac awake (caffeinate)" if self.caffeinate else "could not keep the Mac awake: set Sleep to Never in System Settings")
         watcher = monitor.Monitor(self.run_dir)
         watcher.start()
         self.watchdog_stop = threading.Event()
@@ -166,6 +169,7 @@ class Run:
             self._run_tests(context)
         finally:
             control.end()
+            awake.stop(self.caffeinate)
             self.watchdog_stop.set()
             # Whatever happened (finished, failed or Stop): no faults, online, no camera label, so the app is left like a person uses it.
             watcher.stop()
@@ -199,6 +203,9 @@ class Run:
                         handle.write(time.strftime("%H:%M:%S ") + "Studio was closed during the run: the tester opened it again\n")
                     context.app = None
                     context.launch()
+                    saved = recover.save_crash_reports(context, since=gone_since - 120)
+                    if saved:
+                        context.log("WATCHDOG: crash report(s) saved: " + ", ".join(saved))
                 except Exception as error:
                     context.log(f"WATCHDOG: could not open Studio ({error})")
                 gone_since = None

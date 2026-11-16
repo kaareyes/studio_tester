@@ -11,7 +11,7 @@ import time
 
 from tester import catalog, faults, oracle, profiles
 from tester.runner import Skip
-from . import common, driver
+from . import common, driver, recover
 from .common import plan_from_options
 
 
@@ -28,12 +28,11 @@ def _sessions(options):
 
 def audition_test(session, number, options, state):
     def test(context):
-        app = common.app_of(context)
         rnd = state["rnd"]
         project, entry = session
-        if state.get("opened") != entry["id"]:
-            common.open_session_by_id(app, entry["id"], entry["name"])
-            state["opened"] = entry["id"]
+        # Before EVERY audition: Studio is running (opened again if it crashed), signed in, and on this session. After a crash in the
+        # middle of the night the next audition starts clean instead of failing from the wrong screen.
+        app = recover.ensure_ready(context, (entry["id"], entry["name"]))
         mode = options.get("mode") or "online"
         offline = mode == "offline" or (mode == "mixed" and rnd.random() < 0.5)
         faults.offline(offline)

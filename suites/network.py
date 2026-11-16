@@ -13,7 +13,7 @@ from . import common, driver, recover
 from .common import plan_from_options
 from .realistic import _sessions
 
-DEFAULT_PRESETS = ["s3-cut-at-50.json", "s3-cut-at-90.json", "s3-lost-response.json", "media-lost-response.json", "attach-lost-response.json",
+DEFAULT_PRESETS = ["s3-cut-at-50.json", "s3-cut-at-90.json", "s3-lost-response.json", "media-lost-response.json", "attach-lost-response.json", "attach-exact-lost-response.json",
                    "rest-slow-3s.json", "s3-slow.json", "server-down.json", "timeout-then-recover.json", "intermittent-seed-42.json",
                    "wifi-up-no-internet.json"]
 

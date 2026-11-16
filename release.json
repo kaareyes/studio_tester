@@ -1,5 +1,5 @@
 {
- "version": "1.0.5",
- "notes": "Quit Studio Tester button with a warning; only the tester's own page can control it (security); pause with Esc (3 s) and cancel; guide updated",
+ "version": "1.0.6",
+ "notes": "Overnight safety (Mac kept awake, auto-reopen after a crash, every audition recovers); more recovery scenarios; coverage list for every Studio test; Code checks suite; guide: set the display to never sleep before a long test",
  "min_build": ""
 }

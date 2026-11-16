@@ -1,6 +1,6 @@
 """Test suites. Each suite is (title, description, tests); `tests` is a list of (test name, function(context)) or a function of the page
 options that builds that list. Add a suite here to show it on the page. `needs` says what the page must ask for."""
-from . import build_check, chaos, explore, friday, long_video, network, offline_load, realistic, recovery, smoke, soak
+from . import build_check, chaos, checks, explore, friday, long_video, network, offline_load, realistic, recovery, smoke, soak
 
 SUITES = {
     "build_check": ("Build check (1 min)", "Starts the chosen Studio build and checks that it can be driven by name.", build_check.TESTS),
@@ -13,6 +13,7 @@ SUITES = {
     "offline_load": ("Offline load (100+ auditions)", "Generates many offline auditions, goes online and checks that every one syncs once. Needs a small test photo and video.", offline_load.build),
     "long_video": ("Long video (25-50 min takes)", "Realistic auditions with 25-50 minute takes; memory must return near the start and uploads must finish. Takes hours.", long_video.build),
     "soak": ("Soak (hours)", "Audition cycles for hours with online/offline switches; watches memory, CPU and open files.", soak.build),
+    "checks": ("Code checks (developers)", "The checks that are not clicking in the app: GraphQL schema drift and the Swift unit tests of the offline package. Needs the Studio repository on this Mac; on a QA Mac it is skipped.", checks.TESTS),
     "friday": ("Friday scope", "One test per row of the weekly stress scope; rows that cannot be automated yet say so.", friday.build),
 }
 # Suites that record video need a camera and the ticked sessions.

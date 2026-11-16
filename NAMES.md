@@ -2,7 +2,7 @@
 
 Generated from the source (`.testID(...)` / `.testTapTarget(...)`). `\(...)` parts are filled in at run time (the record id).
 
-305 names.
+323 names.
 
 | Name | Where |
 |---|---|
@@ -30,11 +30,11 @@ Generated from the source (`.testID(...)` / `.testTapTarget(...)`). `\(...)` par
 | `capture.deleted.image.restore` | DeleteSceneList.swift:181 |
 | `capture.deleted.restore` | DeleteSceneList.swift:88 |
 | `capture.deleted.toggle` | DeleteSceneList.swift:247 |
-| `capture.exit` | CaptureGroupView.swift:668, CaptureGroupView.swift:1044, CaptureGroupView.swift:1060 |
-| `capture.finalize` | CaptureGroupView.swift:438, CaptureGroupView.swift:746, CaptureGroupView.swift:1370 |
-| `capture.fullscreenRecordingIndicator` | NewVideoEditorView.swift:2776 |
-| `capture.fullscreenRecordingTimer` | NewVideoEditorView.swift:2789 |
-| `capture.fullscreenStop` | NewVideoEditorView.swift:2797 |
+| `capture.exit` | CaptureGroupView.swift:1044, CaptureGroupView.swift:1060, CaptureGroupView.swift:1287, CaptureGroupView.swift:668 |
+| `capture.finalize` | CaptureGroupView.swift:1370, CaptureGroupView.swift:438, CaptureGroupView.swift:746 |
+| `capture.fullscreenRecordingIndicator` | NewVideoEditorView.swift:2783 |
+| `capture.fullscreenRecordingTimer` | NewVideoEditorView.swift:2796 |
+| `capture.fullscreenStop` | NewVideoEditorView.swift:2804 |
 | `capture.groupImage` | NewVideoEditorView.swift:654 |
 | `capture.groupImagePlaceholder` | NewVideoEditorView.swift:792 |
 | `capture.groupImagePreview` | NewVideoEditorView.swift:710, NewVideoEditorView.swift:760, NewVideoEditorView.swift:780 |
@@ -44,24 +44,24 @@ Generated from the source (`.testID(...)` / `.testTapTarget(...)`). `\(...)` par
 | `capture.image.delete` | CaptureGroupView.swift:991 |
 | `capture.image.delete.\(index)` | CaptureImageView.swift:160 |
 | `capture.image.edit.\(index)` | CaptureImageView.swift:148 |
-| `capture.image.exitPreview` | NewVideoEditorView.swift:2964 |
+| `capture.image.exitPreview` | NewVideoEditorView.swift:2971 |
 | `capture.image.makePrimary` | CaptureGroupView.swift:933, CaptureGroupView.swift:978 |
 | `capture.image.name.\(index)` | CaptureImageView.swift:134 |
-| `capture.image.next` | NewVideoEditorView.swift:2914 |
+| `capture.image.next` | NewVideoEditorView.swift:2921 |
 | `capture.image.options.\(index)` | CaptureImageView.swift:121 |
-| `capture.image.previous` | NewVideoEditorView.swift:2901 |
+| `capture.image.previous` | NewVideoEditorView.swift:2908 |
 | `capture.image.recapture` | CaptureGroupView.swift:1009 |
 | `capture.image.retake` | CaptureGroupView.swift:920 |
 | `capture.image.save` | CaptureGroupView.swift:905 |
 | `capture.image.saveAndFinish` | CaptureGroupView.swift:1030 |
 | `capture.micNoInput` | MicLevelMeter.swift:115, MicLevelMeter.swift:226 |
-| `capture.mode.addMedia` | CaptureGroupView.swift:89, CaptureGroupView.swift:564, CaptureGroupView.swift:1109 |
-| `capture.mode.image` | CaptureGroupView.swift:84, CaptureGroupView.swift:559, CaptureGroupView.swift:1104 |
-| `capture.mode.video` | CaptureGroupView.swift:79, CaptureGroupView.swift:540, CaptureGroupView.swift:1086 |
-| `capture.modeMenu` | CaptureGroupView.swift:99, CaptureGroupView.swift:574, CaptureGroupView.swift:1119 |
+| `capture.mode.addMedia` | CaptureGroupView.swift:1109, CaptureGroupView.swift:564, CaptureGroupView.swift:89 |
+| `capture.mode.image` | CaptureGroupView.swift:1104, CaptureGroupView.swift:559, CaptureGroupView.swift:84 |
+| `capture.mode.video` | CaptureGroupView.swift:1086, CaptureGroupView.swift:540, CaptureGroupView.swift:79 |
+| `capture.modeMenu` | CaptureGroupView.swift:1119, CaptureGroupView.swift:574, CaptureGroupView.swift:99 |
 | `capture.playRecordedSlate` | CaptureGroupView.swift:650 |
 | `capture.playback.back5` | CaptureGroupView.swift:159 |
-| `capture.playback.exit` | NewVideoEditorView.swift:3131 |
+| `capture.playback.exit` | NewVideoEditorView.swift:3138 |
 | `capture.playback.forward5` | CaptureGroupView.swift:210 |
 | `capture.playback.playPause` | CaptureGroupView.swift:186 |
 | `capture.playback.slider` | CaptureGroupView.swift:334, CaptureGroupView.swift:339 |
@@ -72,11 +72,11 @@ Generated from the source (`.testID(...)` / `.testTapTarget(...)`). `\(...)` par
 | `capture.record` | CaptureGroupView.swift:770 |
 | `capture.recordingIndicator` | CaptureGroupView.swift:484 |
 | `capture.recordingTimer` | CaptureGroupView.swift:497 |
-| `capture.restoreDeleted` | NewVideoEditorView.swift:6952 |
+| `capture.restoreDeleted` | NewVideoEditorView.swift:6959 |
 | `capture.statusBar.autoFullScreen` | VideoEditorStatusBar.swift:165 |
 | `capture.statusBar.projectName` | VideoEditorStatusBar.swift:102 |
 | `capture.statusBar.shortcuts` | VideoEditorStatusBar.swift:152 |
-| `capture.statusTitle` | CaptureGroupView.swift:118, CaptureGroupView.swift:125, CaptureGroupView.swift:460 |
+| `capture.statusTitle` | CaptureGroupView.swift:118, CaptureGroupView.swift:1187, CaptureGroupView.swift:1193, CaptureGroupView.swift:1201, CaptureGroupView.swift:125, CaptureGroupView.swift:460, CaptureGroupView.swift:469, CaptureGroupView.swift:519, CaptureGroupView.swift:527, CaptureGroupView.swift:875, CaptureGroupView.swift:949, CaptureGroupView.swift:957 |
 | `capture.stop` | CaptureGroupView.swift:506 |
 | `capture.take.card.\(index)` | CaptureImageView.swift:320 |
 | `capture.take.delete.\(index)` | CaptureImageView.swift:470 |
@@ -100,16 +100,16 @@ Generated from the source (`.testID(...)` / `.testTapTarget(...)`). `\(...)` par
 | `capture.talent.notesToggle.\(talent.id.uuidString.lowercased())` | VideoEditorSideView.swift:673 |
 | `capture.talent.photo.\(talent.id.uuidString.lowercased())` | VideoEditorSideView.swift:557 |
 | `capture.talent.photoDone.\(talent.id.uuidString.lowercased())` | VideoEditorSideView.swift:534 |
-| `capture.talent.playSlate.\(talent.id.uuidString.lowercased())` | VideoEditorSideView.swift:157, VideoEditorSideView.swift:312, VideoEditorSideView.swift:379 |
+| `capture.talent.playSlate.\(talent.id.uuidString.lowercased())` | VideoEditorSideView.swift:157, VideoEditorSideView.swift:312, VideoEditorSideView.swift:379, VideoEditorSideView.swift:447, VideoEditorSideView.swift:490, VideoEditorSideView.swift:889 |
 | `capture.talent.remove.\(talent.id.uuidString.lowercased())` | VideoEditorSideView.swift:815 |
 | `capture.talent.role.\(talent.id.uuidString.lowercased())` | VideoEditorSideView.swift:514 |
 | `capture.talent.select.\(talent.id.uuidString.lowercased())` | VideoEditorSideView.swift:114 |
 | `capture.talent.slate.\(talent.id.uuidString.lowercased())` | VideoEditorSideView.swift:584 |
 | `capture.talent.slateDone.\(talent.id.uuidString.lowercased())` | VideoEditorSideView.swift:567 |
-| `capture.talent.thumbnail.\(talent.id.uuidString.lowercased())` | VideoEditorSideView.swift:131, VideoEditorSideView.swift:217, VideoEditorSideView.swift:250 |
-| `capture.toggleSidebar` | NewVideoEditorView.swift:573, NewVideoEditorView.swift:3301 |
-| `capture.zoomRecordingTimer` | NewVideoEditorView.swift:2528 |
-| `capture.zoomStop` | NewVideoEditorView.swift:2540 |
+| `capture.talent.thumbnail.\(talent.id.uuidString.lowercased())` | VideoEditorSideView.swift:131, VideoEditorSideView.swift:217, VideoEditorSideView.swift:250, VideoEditorSideView.swift:285, VideoEditorSideView.swift:352, VideoEditorSideView.swift:419 |
+| `capture.toggleSidebar` | NewVideoEditorView.swift:3308, NewVideoEditorView.swift:573 |
+| `capture.zoomRecordingTimer` | NewVideoEditorView.swift:2535 |
+| `capture.zoomStop` | NewVideoEditorView.swift:2547 |
 | `login.email` | LoginView.swift:60 |
 | `login.password` | LoginView.swift:83 |
 | `login.signIn` | LoginView.swift:127 |
@@ -156,56 +156,71 @@ Generated from the source (`.testID(...)` / `.testTapTarget(...)`). `\(...)` par
 | `projects.row.studioSessions.\(project.id.lowercased())` | ProjectsListDisplayView.swift:1621 |
 | `projects.row.videoStitchingEnabled.\(project.id.lowercased())` | ProjectsListDisplayView.swift:1494, ProjectsListDisplayView.swift:1589 |
 | `projects.search` | ProjectsView.swift:127 |
-| `queue.batch.\(media.queueRowKey)` | MediaView.swift:556 |
-| `queue.batch.completedCount` | MediaView.swift:923 |
-| `queue.batch.expand` | MediaView.swift:1026 |
-| `queue.batch.failedCount` | MediaView.swift:944 |
-| `queue.batch.fileCount` | MediaView.swift:859 |
-| `queue.batch.name` | MediaView.swift:821 |
-| `queue.batch.percent` | MediaView.swift:954, MediaView.swift:1008 |
-| `queue.batch.progress` | MediaView.swift:959, MediaView.swift:1013 |
-| `queue.batch.renderWarning` | MediaView.swift:871 |
-| `queue.batch.retry` | MediaView.swift:905 |
-| `queue.batch.size` | MediaView.swift:864 |
-| `queue.batch.status` | MediaView.swift:978, MediaView.swift:996, MediaView.swift:1001 |
-| `queue.batch.talentCount` | MediaView.swift:839 |
+| `queue.batch.\(media.queueRowKey)` | MediaView.swift:581 |
+| `queue.batch.completedCount` | MediaView.swift:952 |
+| `queue.batch.expand` | MediaView.swift:1071 |
+| `queue.batch.failedCount` | MediaView.swift:973 |
+| `queue.batch.fileCount` | MediaView.swift:888 |
+| `queue.batch.name` | MediaView.swift:850 |
+| `queue.batch.percent` | MediaView.swift:1053, MediaView.swift:983 |
+| `queue.batch.progress` | MediaView.swift:1058, MediaView.swift:988 |
+| `queue.batch.renderWarning` | MediaView.swift:900 |
+| `queue.batch.retry` | MediaView.swift:934 |
+| `queue.batch.size` | MediaView.swift:893 |
+| `queue.batch.status` | MediaView.swift:1015, MediaView.swift:1041, MediaView.swift:1046 |
+| `queue.batch.syncedFromOffline` | MediaView.swift:1000, MediaView.swift:1026 |
+| `queue.batch.talentCount` | MediaView.swift:868 |
 | `queue.clearLocalFiles` | MediaView.swift:59 |
-| `queue.close` | MediaView.swift:598 |
-| `queue.editSelectsPreparing` | MediaView.swift:429 |
-| `queue.failedTake.\(entry.id)` | MediaView.swift:1461 |
-| `queue.failedTake.delete` | MediaView.swift:1452 |
-| `queue.failedTake.error` | MediaView.swift:1444 |
-| `queue.failedTake.name` | MediaView.swift:1439 |
-| `queue.failedTake.retry` | MediaView.swift:1455 |
-| `queue.merging` | MediaView.swift:477 |
-| `queue.offline.expand` | NetworkStatus.swift:382 |
-| `queue.offline.file` | NetworkStatus.swift:406 |
-| `queue.offline.fileCount` | NetworkStatus.swift:372 |
-| `queue.offline.name` | NetworkStatus.swift:357 |
-| `queue.offline.row.\(row.id.lowercased())` | NetworkStatus.swift:412 |
-| `queue.offline.size` | NetworkStatus.swift:375 |
-| `queue.offline.status` | NetworkStatus.swift:378 |
-| `queue.offline.talentCount` | NetworkStatus.swift:366 |
-| `queue.row.\(file[index].file.mediaID.isEmpty ? ` | MediaView.swift:1363 |
-| `queue.row.format` | MediaView.swift:1222 |
-| `queue.row.name` | MediaView.swift:1210 |
-| `queue.row.percent` | MediaView.swift:1331 |
-| `queue.row.progress` | MediaView.swift:1336 |
-| `queue.row.retry` | MediaView.swift:1299 |
-| `queue.row.size` | MediaView.swift:1216 |
-| `queue.row.status` | MediaView.swift:1317, MediaView.swift:1325, MediaView.swift:1353 |
-| `queue.row.talentName` | MediaView.swift:1233 |
-| `queue.row.talentRole` | MediaView.swift:1242 |
-| `queue.row.uploadOriginal` | MediaView.swift:1277 |
+| `queue.close` | MediaView.swift:623 |
+| `queue.editSelectsPreparing` | MediaView.swift:430 |
+| `queue.failedTake.\(entry.id)` | MediaView.swift:1510 |
+| `queue.failedTake.delete` | MediaView.swift:1501 |
+| `queue.failedTake.error` | MediaView.swift:1493 |
+| `queue.failedTake.name` | MediaView.swift:1488 |
+| `queue.failedTake.retry` | MediaView.swift:1504 |
+| `queue.linkToTalent.close` | NetworkStatus.swift:717 |
+| `queue.linkToTalent.confirm` | NetworkStatus.swift:728 |
+| `queue.linkToTalent.explanation` | NetworkStatus.swift:682 |
+| `queue.linkToTalent.overlay` | NetworkStatus.swift:430 |
+| `queue.linkToTalent.result` | NetworkStatus.swift:713 |
+| `queue.linkToTalent.search` | NetworkStatus.swift:684 |
+| `queue.linkToTalent.talent.\(talent.id.uuidString.lowercased())` | NetworkStatus.swift:702 |
+| `queue.merging` | MediaView.swift:478 |
+| `queue.offline.expand` | NetworkStatus.swift:601 |
+| `queue.offline.failedStep` | NetworkStatus.swift:512 |
+| `queue.offline.file` | NetworkStatus.swift:628 |
+| `queue.offline.fileCount` | NetworkStatus.swift:539 |
+| `queue.offline.linkToTalent` | NetworkStatus.swift:580 |
+| `queue.offline.linkToTalent.failed` | NetworkStatus.swift:568 |
+| `queue.offline.localName` | NetworkStatus.swift:517 |
+| `queue.offline.name` | NetworkStatus.swift:506 |
+| `queue.offline.openOfflineSync` | NetworkStatus.swift:561 |
+| `queue.offline.retry` | NetworkStatus.swift:594 |
+| `queue.offline.row.\(row.id.lowercased())` | NetworkStatus.swift:634 |
+| `queue.offline.session.\(group.key)` | NetworkStatus.swift:359 |
+| `queue.offline.size` | NetworkStatus.swift:542 |
+| `queue.offline.status` | NetworkStatus.swift:549 |
+| `queue.offline.talentCount` | NetworkStatus.swift:529 |
+| `queue.row.\(file[index].file.mediaID.isEmpty ? ` | MediaView.swift:1412 |
+| `queue.row.format` | MediaView.swift:1271 |
+| `queue.row.name` | MediaView.swift:1259 |
+| `queue.row.percent` | MediaView.swift:1380 |
+| `queue.row.progress` | MediaView.swift:1385 |
+| `queue.row.retry` | MediaView.swift:1348 |
+| `queue.row.size` | MediaView.swift:1265 |
+| `queue.row.status` | MediaView.swift:1366, MediaView.swift:1374, MediaView.swift:1402 |
+| `queue.row.talentName` | MediaView.swift:1282 |
+| `queue.row.talentRole` | MediaView.swift:1291 |
+| `queue.row.uploadOriginal` | MediaView.swift:1326 |
 | `queue.search` | MediaView.swift:46 |
-| `queue.syncBadge` | NetworkStatus.swift:284 |
-| `queue.tab.all` | MediaView.swift:126 |
-| `queue.tab.completed` | MediaView.swift:138 |
-| `queue.tab.pending` | MediaView.swift:131 |
-| `queue.uploads.clearAll` | MediaView.swift:214 |
-| `queue.uploads.filesProcessing` | MediaView.swift:190 |
-| `queue.uploads.progress` | MediaView.swift:195 |
-| `queue.uploads.toggleDetailedView` | MediaView.swift:231 |
+| `queue.tab.all` | MediaView.swift:127 |
+| `queue.tab.completed` | MediaView.swift:139 |
+| `queue.tab.pending` | MediaView.swift:132 |
+| `queue.uploads.clearAll` | MediaView.swift:215 |
+| `queue.uploads.filesProcessing` | MediaView.swift:191 |
+| `queue.uploads.header` | MediaView.swift:561 |
+| `queue.uploads.progress` | MediaView.swift:196 |
+| `queue.uploads.toggleDetailedView` | MediaView.swift:232 |
 | `resume.cancel` | ResumeAlertView.swift:120 |
 | `resume.close` | ResumeAlertView.swift:30 |
 | `resume.dialog` | ResumeAlertView.swift:147 |
@@ -216,14 +231,14 @@ Generated from the source (`.testID(...)` / `.testTapTarget(...)`). `\(...)` par
 | `resume.title` | ResumeAlertView.swift:43 |
 | `session.addOfflineTalent` | ScheduleView.swift:378 |
 | `session.addTalent` | ScheduleView.swift:253 |
-| `session.auditionTitle` | FullSchedule.swift:1360 |
-| `session.clearGroup` | FullSchedule.swift:2136 |
-| `session.enterAuditionMode` | FullSchedule.swift:2107 |
-| `session.enterAuditionModeDisabled` | FullSchedule.swift:2117 |
-| `session.groupImage.label` | FullSchedule.swift:1900, FullSchedule.swift:1904 |
-| `session.groupImage.photo` | FullSchedule.swift:1952 |
-| `session.groupImage.playSlate` | FullSchedule.swift:2275, FullSchedule.swift:2312, FullSchedule.swift:2352 |
-| `session.groupImage.slate` | FullSchedule.swift:1992 |
+| `session.auditionTitle` | FullSchedule.swift:1374 |
+| `session.clearGroup` | FullSchedule.swift:2150 |
+| `session.enterAuditionMode` | FullSchedule.swift:2121 |
+| `session.enterAuditionModeDisabled` | FullSchedule.swift:2131 |
+| `session.groupImage.label` | FullSchedule.swift:1914, FullSchedule.swift:1918 |
+| `session.groupImage.photo` | FullSchedule.swift:1966 |
+| `session.groupImage.playSlate` | FullSchedule.swift:2289, FullSchedule.swift:2326, FullSchedule.swift:2366, FullSchedule.swift:2400 |
+| `session.groupImage.slate` | FullSchedule.swift:2006 |
 | `session.hideAuditioned` | ScheduleView.swift:338, ScheduleView.swift:353 |
 | `session.hideDeclined` | ScheduleView.swift:298, ScheduleView.swift:313 |
 | `session.searchTalent` | ScheduleView.swift:233 |
@@ -236,19 +251,20 @@ Generated from the source (`.testID(...)` / `.testTapTarget(...)`). `\(...)` par
 | `session.talent.add.\(id.lowercased())` | ScheduleView.swift:982 |
 | `session.talent.added.\(id.lowercased())` | ScheduleView.swift:975 |
 | `session.talent.agency.\(id.lowercased())` | ScheduleView.swift:1292 |
-| `session.talent.cardName.\(schedule.id.uuidString.lowercased())` | FullSchedule.swift:1081 |
-| `session.talent.photo.\(schedule.id.uuidString.lowercased())` | FullSchedule.swift:372, FullSchedule.swift:455 |
-| `session.talent.photoDone.\(schedule.id.uuidString.lowercased())` | FullSchedule.swift:363, FullSchedule.swift:445 |
-| `session.talent.playSlate.\(schedule.id.uuidString.lowercased())` | FullSchedule.swift:595, FullSchedule.swift:637, FullSchedule.swift:680 |
-| `session.talent.removeFromGroup.\(schedule.id.uuidString.lowercased())` | FullSchedule.swift:420 |
-| `session.talent.role.\(id.lowercased())` | ScheduleView.swift:1241, ScheduleView.swift:1248, ScheduleView.swift:1265 |
-| `session.talent.roleMenu.\(schedule.id.uuidString.lowercased())` | FullSchedule.swift:1225 |
-| `session.talent.roleOption.\(sessionRole.id.uuidString.lowercased())` | FullSchedule.swift:1192 |
-| `session.talent.slate.\(schedule.id.uuidString.lowercased())` | FullSchedule.swift:392, FullSchedule.swift:479 |
-| `session.talent.slateDone.\(schedule.id.uuidString.lowercased())` | FullSchedule.swift:383, FullSchedule.swift:468 |
-| `session.talent.status.\(id.lowercased())` | ScheduleView.swift:1322, ScheduleView.swift:1331, ScheduleView.swift:1347 |
+| `session.talent.cardName.\(schedule.id.uuidString.lowercased())` | FullSchedule.swift:1095 |
+| `session.talent.photo.\(schedule.id.uuidString.lowercased())` | FullSchedule.swift:386, FullSchedule.swift:469 |
+| `session.talent.photoDone.\(schedule.id.uuidString.lowercased())` | FullSchedule.swift:377, FullSchedule.swift:459 |
+| `session.talent.playSlate.\(schedule.id.uuidString.lowercased())` | FullSchedule.swift:1012, FullSchedule.swift:1065, FullSchedule.swift:609, FullSchedule.swift:651, FullSchedule.swift:694, FullSchedule.swift:736, FullSchedule.swift:800, FullSchedule.swift:872, FullSchedule.swift:942 |
+| `session.talent.removeFromGroup.\(schedule.id.uuidString.lowercased())` | FullSchedule.swift:434 |
+| `session.talent.role.\(id.lowercased())` | ScheduleView.swift:1241, ScheduleView.swift:1248, ScheduleView.swift:1265, ScheduleView.swift:1269 |
+| `session.talent.roleMenu.\(schedule.id.uuidString.lowercased())` | FullSchedule.swift:1239 |
+| `session.talent.roleOption.\(sessionRole.id.uuidString.lowercased())` | FullSchedule.swift:1206 |
+| `session.talent.slate.\(schedule.id.uuidString.lowercased())` | FullSchedule.swift:406, FullSchedule.swift:493 |
+| `session.talent.slateDone.\(schedule.id.uuidString.lowercased())` | FullSchedule.swift:397, FullSchedule.swift:482 |
+| `session.talent.status.\(id.lowercased())` | ScheduleView.swift:1322, ScheduleView.swift:1331, ScheduleView.swift:1347, ScheduleView.swift:1358, ScheduleView.swift:1367, ScheduleView.swift:1378, ScheduleView.swift:1394 |
 | `session.talent.timeIn.\(id.lowercased())` | ScheduleView.swift:1047 |
 | `session.talent.waitingTime.\(id.lowercased())` | ScheduleView.swift:1052 |
+| `session.talents.loadMore` | FullSchedule.swift:95 |
 | `session.title` | StatusBar.swift:390 |
 | `sessions.pagingLoader` | ProjectsListDisplayView.swift:118, ProjectsListDisplayView.swift:148 |
 | `sessions.row.\((session?.id ?? ` | ProjectsListDisplayView.swift:418 |
@@ -263,51 +279,53 @@ Generated from the source (`.testID(...)` / `.testTapTarget(...)`). `\(...)` par
 | `sessions.row.pending.\((session?.id ?? ` | ProjectsListDisplayView.swift:608 |
 | `sessions.row.scheduled.\((session?.id ?? ` | ProjectsListDisplayView.swift:444 |
 | `sessions.row.zoom.\((session?.id ?? ` | ProjectsListDisplayView.swift:383 |
-| `statusBar.browse` | StatusBar.swift:1115 |
-| `statusBar.connection` | StatusBar.swift:1339 |
+| `statusBar.browse` | StatusBar.swift:1122 |
+| `statusBar.connection` | StatusBar.swift:1346 |
 | `statusBar.copyZoomLink` | StatusBar.swift:577 |
 | `statusBar.editSelects` | StatusBar.swift:608 |
 | `statusBar.offlineBanner` | OfflineStatusBanner.swift:45 |
 | `statusBar.offlineSync` | OfflineSyncList.swift:71 |
+| `statusBar.offlineSyncIndicator` | NetworkStatus.swift:844 |
+| `statusBar.offlineSyncIndicator.checkOfflineSync` | NetworkStatus.swift:834 |
 | `statusBar.projectOption.\(project.id.lowercased())` | StatusBar.swift:251 |
 | `statusBar.projectSelector` | StatusBar.swift:166 |
-| `statusBar.queue` | StatusBar.swift:991 |
-| `statusBar.queueCount` | StatusBar.swift:1009 |
-| `statusBar.shortcuts` | StatusBar.swift:891 |
-| `statusBar.syncAll` | StatusBar.swift:1226 |
-| `statusBar.title` | StatusBar.swift:1679 |
-| `syncTalent.back` | LinkOfflineSessionView.swift:140 |
-| `syncTalent.cancel` | LinkOfflineSessionView.swift:132 |
-| `syncTalent.card.\(talent.id.uuidString)` | LinkOfflineSessionView.swift:287 |
-| `syncTalent.card.alreadySynced` | LinkOfflineSessionView.swift:628 |
-| `syncTalent.card.candidate.\(candidate.profileId)` | LinkOfflineSessionView.swift:660 |
-| `syncTalent.card.change` | LinkOfflineSessionView.swift:749 |
-| `syncTalent.card.confirm` | LinkOfflineSessionView.swift:773 |
-| `syncTalent.card.createNew` | LinkOfflineSessionView.swift:751 |
-| `syncTalent.card.matchAgency` | LinkOfflineSessionView.swift:708 |
-| `syncTalent.card.matchName` | LinkOfflineSessionView.swift:706 |
-| `syncTalent.card.matchReason` | LinkOfflineSessionView.swift:711 |
-| `syncTalent.card.noMatch` | LinkOfflineSessionView.swift:736 |
-| `syncTalent.card.noResults` | LinkOfflineSessionView.swift:664 |
-| `syncTalent.card.offlineAgency` | LinkOfflineSessionView.swift:606 |
-| `syncTalent.card.offlineName` | LinkOfflineSessionView.swift:602 |
-| `syncTalent.card.profileMenu` | LinkOfflineSessionView.swift:725 |
-| `syncTalent.card.search` | LinkOfflineSessionView.swift:641 |
-| `syncTalent.card.status` | LinkOfflineSessionView.swift:680, LinkOfflineSessionView.swift:684, LinkOfflineSessionView.swift:689 |
-| `syncTalent.confirmAll` | LinkOfflineSessionView.swift:268 |
-| `syncTalent.confirmEveryHint` | LinkOfflineSessionView.swift:291 |
-| `syncTalent.confirmProject` | LinkOfflineSessionView.swift:136 |
-| `syncTalent.continueRoles` | LinkOfflineSessionView.swift:143 |
-| `syncTalent.continueWithExistingFiles` | LinkOfflineSessionView.swift:98 |
-| `syncTalent.duplicateError` | LinkOfflineSessionView.swift:297 |
-| `syncTalent.error` | LinkOfflineSessionView.swift:87 |
-| `syncTalent.matching` | LinkOfflineSessionView.swift:261 |
-| `syncTalent.missingFiles` | LinkOfflineSessionView.swift:91 |
-| `syncTalent.projectMenu` | LinkOfflineSessionView.swift:179 |
-| `syncTalent.projectReady` | LinkOfflineSessionView.swift:123 |
-| `syncTalent.roleMenu.\(role.id.uuidString)` | LinkOfflineSessionView.swift:233 |
-| `syncTalent.sessionMenu` | LinkOfflineSessionView.swift:189 |
-| `syncTalent.sessionName` | LinkOfflineSessionView.swift:119 |
-| `syncTalent.status` | LinkOfflineSessionView.swift:86 |
-| `syncTalent.stepTitle` | LinkOfflineSessionView.swift:116 |
-| `syncTalent.sync` | LinkOfflineSessionView.swift:149 |
+| `statusBar.queue` | StatusBar.swift:998 |
+| `statusBar.queueCount` | StatusBar.swift:1016 |
+| `statusBar.shortcuts` | StatusBar.swift:898 |
+| `statusBar.syncAll` | StatusBar.swift:1233 |
+| `statusBar.title` | StatusBar.swift:1686 |
+| `syncTalent.back` | LinkOfflineSessionView.swift:146 |
+| `syncTalent.cancel` | LinkOfflineSessionView.swift:138 |
+| `syncTalent.card.\(talent.id.uuidString)` | LinkOfflineSessionView.swift:298 |
+| `syncTalent.card.alreadySynced` | LinkOfflineSessionView.swift:680 |
+| `syncTalent.card.candidate.\(candidate.profileId)` | LinkOfflineSessionView.swift:712 |
+| `syncTalent.card.change` | LinkOfflineSessionView.swift:803 |
+| `syncTalent.card.confirm` | LinkOfflineSessionView.swift:827 |
+| `syncTalent.card.createNew` | LinkOfflineSessionView.swift:805 |
+| `syncTalent.card.matchAgency` | LinkOfflineSessionView.swift:760 |
+| `syncTalent.card.matchName` | LinkOfflineSessionView.swift:758 |
+| `syncTalent.card.matchReason` | LinkOfflineSessionView.swift:763 |
+| `syncTalent.card.noMatch` | LinkOfflineSessionView.swift:788 |
+| `syncTalent.card.noResults` | LinkOfflineSessionView.swift:716 |
+| `syncTalent.card.offlineAgency` | LinkOfflineSessionView.swift:658 |
+| `syncTalent.card.offlineName` | LinkOfflineSessionView.swift:654 |
+| `syncTalent.card.profileMenu` | LinkOfflineSessionView.swift:777 |
+| `syncTalent.card.search` | LinkOfflineSessionView.swift:693 |
+| `syncTalent.card.status` | LinkOfflineSessionView.swift:732, LinkOfflineSessionView.swift:736, LinkOfflineSessionView.swift:741, LinkOfflineSessionView.swift:745 |
+| `syncTalent.confirmAll` | LinkOfflineSessionView.swift:274 |
+| `syncTalent.confirmEveryHint` | LinkOfflineSessionView.swift:302 |
+| `syncTalent.confirmProject` | LinkOfflineSessionView.swift:142 |
+| `syncTalent.continueRoles` | LinkOfflineSessionView.swift:149 |
+| `syncTalent.continueWithExistingFiles` | LinkOfflineSessionView.swift:104 |
+| `syncTalent.duplicateError` | LinkOfflineSessionView.swift:308 |
+| `syncTalent.error` | LinkOfflineSessionView.swift:93 |
+| `syncTalent.matching` | LinkOfflineSessionView.swift:267 |
+| `syncTalent.missingFiles` | LinkOfflineSessionView.swift:97 |
+| `syncTalent.projectMenu` | LinkOfflineSessionView.swift:185 |
+| `syncTalent.projectReady` | LinkOfflineSessionView.swift:129 |
+| `syncTalent.roleMenu.\(role.id.uuidString)` | LinkOfflineSessionView.swift:239 |
+| `syncTalent.sessionMenu` | LinkOfflineSessionView.swift:195 |
+| `syncTalent.sessionName` | LinkOfflineSessionView.swift:125 |
+| `syncTalent.status` | LinkOfflineSessionView.swift:92 |
+| `syncTalent.stepTitle` | LinkOfflineSessionView.swift:122 |
+| `syncTalent.sync` | LinkOfflineSessionView.swift:155 |
