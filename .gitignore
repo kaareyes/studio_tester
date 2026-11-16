@@ -1,0 +1,6 @@
+.venv/
+reports/
+catalog.json
+settings.json
+.update_backup/
+__pycache__/
