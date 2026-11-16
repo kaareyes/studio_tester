@@ -111,7 +111,7 @@ button.stop{background:#c0392b}button.small{padding:5px 10px;font-size:12px;marg
 .big{font-size:34px;font-weight:800}.tree{max-height:340px;overflow:auto;border:1px solid #dde6ef;border-radius:6px;padding:6px}
 .proj{font-weight:600;margin-top:6px}.sess{margin-left:22px;font-weight:400;font-size:13px}.grey{color:#999}
 .presets button{background:#2f6fb0;margin-right:8px}.presets button.on{background:#1f3a5f}.app{padding:8px;border:1px solid #dde6ef;border-radius:6px;margin-top:6px;cursor:pointer}.app.sel{border-color:#2f6fb0;background:#eef6ff}.kind{color:#fff;border-radius:4px;padding:1px 7px;font-size:12px}.kind.test{background:#2e8b57}.kind.develop{background:#2f6fb0}.kind.staging{background:#b9770e}.kind.production{background:#c0392b}details{margin-top:10px}
-</style></head><body><header>Studio Tester <small id="ver" style="font-weight:400;color:#cfe"></small><span id="upd" style="float:right;font-size:14px;font-weight:400"></span></header><main>
+</style></head><body><header>Studio Tester <small id="ver" style="font-weight:400;color:#cfe"></small><span style="float:right;font-size:14px;font-weight:400"><span id="updText"></span> <button id="updBtn" class="small" style="margin:0 0 0 8px;font-size:13px;padding:6px 14px" onclick="updateClick()">Update</button></span></header><main>
 <div>
 <section><h2>1. Choose the Studio app</h2><small>These Studio apps are running now. Click the one to test.</small>
 <div id="apps"></div><div id="appsNot"></div><div id="appWarn" class="fix"></div></section>
@@ -158,11 +158,16 @@ const PRESETS={quick:['Quick check (about 15 min)','Two short auditions in each 
 function preset(k){active=k;const v=PRESETS[k][2];$('suite').value=v.suite;$('auditions').value=v.auditions||'';$('rounds').value=v.rounds||'';$('profile').value=v.profile||'mixed';$('mode').value=v.mode||'online';
  $('presetText').textContent=PRESETS[k][1];document.querySelectorAll('#presets button').forEach(b=>b.classList.toggle('on',b.dataset.k==k));suiteChanged();}
 function suiteChanged(){$('suiteText').textContent=info.suites&&info.suites[$('suite').value]?info.suites[$('suite').value][1]:'';estimate();}
-async function checkUpdate(){const u=await (await fetch('/api/update')).json();$('ver').textContent='version '+u.current;
- if(u.available){$('upd').innerHTML=`Update available: <b>${u.latest}</b> ${u.notes?'('+u.notes+')':''} <button class="small" style="background:#e08a00" onclick="applyUpdate()">Update now</button>`;}
- else if(u.error){$('upd').textContent=u.error;}else{$('upd').innerHTML='Up to date <a href="#" onclick="checkUpdate();return false" style="color:#cfe">check again</a>';}}
-async function applyUpdate(){if(!confirm('Update the tester now? It restarts by itself and keeps your catalog, settings and reports.'))return;$('upd').textContent='Updating...';
- const r=await (await fetch('/api/update/apply',{method:'POST',body:'{}'})).json();$('upd').textContent=r.message;if(r.ok){setTimeout(()=>location.reload(),6000);}}
+let updInfo=null;
+function updUI(u){updInfo=u;$('ver').textContent='version '+u.current;const b=$('updBtn');
+ if(u.available){b.textContent='Update to '+u.latest;b.style.background='#e08a00';$('updText').textContent=u.notes?u.notes:'A new version is available';}
+ else if(u.error){b.textContent='Update';b.style.background='#2f6fb0';$('updText').textContent=u.error;}
+ else{b.textContent='Update';b.style.background='#2f6fb0';$('updText').textContent='You have the latest version ('+u.current+')';}}
+async function checkUpdate(){updUI(await (await fetch('/api/update')).json());}
+async function updateClick(){$('updText').textContent='Checking for updates...';await checkUpdate();
+ if(updInfo&&updInfo.available&&confirm('Update to '+updInfo.latest+' now? The tester restarts by itself and keeps your collected projects, settings and reports.'))await applyUpdate();}
+async function applyUpdate(){$('updText').textContent='Updating...';$('updBtn').disabled=true;
+ const r=await (await fetch('/api/update/apply',{method:'POST',body:'{}'})).json();$('updText').textContent=r.message;$('updBtn').disabled=false;if(r.ok){setTimeout(()=>location.reload(),6000);}}
 async function load(){checkUpdate();info=await (await fetch('/api/info')).json();
 
  $('suite').innerHTML=Object.entries(info.suites).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join('');

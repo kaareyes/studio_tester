@@ -236,3 +236,12 @@ class CollectLimit(unittest.TestCase):
         for text in ("First 10 projects", "First 20 projects", "All projects (slow)", "limit:$('limit').value"):
             self.assertIn(text, server.PAGE)
         self.assertIn("fetch('/api/update/apply',{method:'POST',body:'{}'})", server.PAGE)      # the Update call is not touched by the limit
+
+
+class UpdateButton(unittest.TestCase):
+    def test_update_button_is_always_in_the_page_and_checks_on_click(self):
+        self.assertIn('id="updBtn"', server.PAGE)
+        self.assertIn('onclick="updateClick()"', server.PAGE)
+        self.assertIn("async function updateClick()", server.PAGE)
+        self.assertIn("You have the latest version", server.PAGE)         # said when there is nothing newer
+        self.assertIn("fetch('/api/update/apply',{method:'POST',body:'{}'})", server.PAGE)
