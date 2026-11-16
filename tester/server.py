@@ -12,7 +12,7 @@ import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import ax, cameras, catalog, collect, matcher, profiles, runner, setup_check, updater
+from . import ax, cameras, catalog, collect, matcher, profiles, runner, setup_check, share, updater
 
 PORT = int(os.environ.get("STUDIO_TESTER_PORT", "8765"))     # a different port lets a second copy run side by side (tests)
 sys.path.insert(0, runner.ROOT)
@@ -95,142 +95,7 @@ def estimate_text(suite, options):
     problem = profiles.disk_problem(max(1, e["disk_mb"] // 1000), "short") if e["disk_mb"] + 5000 > profiles.free_disk_mb() else None
     return text, problem, bool(problem)
 
-PAGE = """<!doctype html><html><head><meta charset="utf-8"><title>Studio Tester</title><style>
-body{font-family:-apple-system,Helvetica,Arial,sans-serif;margin:0;color:#1f3a5f;background:#f7f9fc}
-header{background:#1f3a5f;color:#fff;padding:14px 24px;font-size:20px;font-weight:600}
-main{display:grid;grid-template-columns:minmax(420px,520px) 1fr;gap:24px;padding:24px}
-section{background:#fff;border:1px solid #c5d0dc;border-radius:10px;padding:18px;margin-bottom:18px}
-h2{font-size:15px;margin:14px 0 6px}h2:first-child{margin-top:0}select,input,textarea{width:100%;padding:8px;font-size:14px;box-sizing:border-box}
-button{padding:10px 18px;font-size:15px;border:0;border-radius:8px;color:#fff;background:#2e8b57;cursor:pointer;margin-top:10px}
-button.stop{background:#c0392b}button.small{padding:5px 10px;font-size:12px;margin:0 4px 0 0;background:#2f6fb0}button:disabled{background:#999}
-.row{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid #eef3f9;font-size:14px}
-.tag{min-width:70px;text-align:center;color:#fff;border-radius:5px;font-size:12px;padding:2px 0;height:18px}
-.passed{background:#2e8b57}.failed{background:#c0392b}.skipped{background:#b9770e}.running{background:#2f6fb0}.waiting{background:#aaa}
-.fix{color:#c0392b}.ok{color:#2e8b57}small{color:#555}pre{font-size:12px;background:#f1f4f8;padding:10px;overflow:auto;max-height:180px}
-.banner{background:#fff4e5;border:2px solid #e08a00;color:#7a4a00;padding:10px 14px;border-radius:8px;font-weight:600;margin-bottom:14px;display:none}
-.big{font-size:34px;font-weight:800}.tree{max-height:340px;overflow:auto;border:1px solid #dde6ef;border-radius:6px;padding:6px}
-.proj{font-weight:600;margin-top:6px}.sess{margin-left:22px;font-weight:400;font-size:13px}.grey{color:#999}
-.presets button{background:#2f6fb0;margin-right:8px}.presets button.on{background:#1f3a5f}.app{padding:8px;border:1px solid #dde6ef;border-radius:6px;margin-top:6px;cursor:pointer}.app.sel{border-color:#2f6fb0;background:#eef6ff}.kind{color:#fff;border-radius:4px;padding:1px 7px;font-size:12px}.kind.test{background:#2e8b57}.kind.develop{background:#2f6fb0}.kind.staging{background:#b9770e}.kind.production{background:#c0392b}details{margin-top:10px}
-</style></head><body><header>Studio Tester <small id="ver" style="font-weight:400;color:#cfe"></small><span style="float:right;font-size:14px;font-weight:400"><span id="updText"></span> <button id="updBtn" class="small" style="margin:0 0 0 8px;font-size:13px;padding:6px 14px" onclick="updateClick()">Update</button></span></header><main>
-<div>
-<section><h2>1. Choose the Studio app</h2><small>These Studio apps are running now. Click the one to test.</small>
-<div id="apps"></div><div id="appsNot"></div><div id="appWarn" class="fix"></div></section>
-<div id="gate" style="display:none">
-<section><h2>This Mac</h2><div id="setup"></div></section>
-<section><h2>2. Projects and sessions</h2>
-<select id="limit" style="width:auto;margin-right:6px"><option value="10">First 10 projects</option><option value="20">First 20 projects</option><option value="50">First 50 projects</option><option value="0">All projects (slow)</option></select>
-<button onclick="collect()" id="collectBtn" style="margin-top:0">Collect projects from the app</button> <button class="stop" onclick="collectStop()">Stop</button>
-<div><small id="collectState">Not collected yet. Studio must be open and signed in with the test account.</small></div>
-<input id="find" placeholder="Search (typos and capital letters are fine)" oninput="search()" style="margin-top:8px">
-<div style="margin-top:6px"><button class="small" onclick="selectAll(true)">Tick all usable</button><button class="small" onclick="selectAll(false)">Untick all</button>
-<button class="small" onclick="randomN()">Tick 5 random</button></div>
-<div id="tree" class="tree"><small>Nothing collected yet.</small></div>
-<small id="picked"></small></section>
-<section><h2>3. How hard?</h2><div class="presets" id="presets"></div><small id="presetText"></small><div id="estimate" style="margin-top:8px"></div>
-<details><summary>Advanced</summary>
-
-<h2>Test suite</h2><select id="suite" onchange="suiteChanged()"></select><small id="suiteText"></small>
-<h2>Take length</h2><select id="profile"><option value="mixed">Mixed (default)</option><option value="short">Short (30 s to 1 min)</option><option value="normal">Normal (1 to 5 min)</option><option value="long">Long (25 to 50 min)</option></select>
-<input id="mix" placeholder="Mix short/normal/long in % (default 50/40/10)" style="margin-top:6px">
-<h2>Mode</h2><select id="mode"><option value="online">Online</option><option value="offline">Offline</option><option value="mixed">Online and offline mixed</option></select>
-<h2>Counts</h2><div style="display:flex;gap:8px"><input id="auditions" placeholder="Auditions per session (3)"><input id="rounds" placeholder="Chaos scenarios (20)"><input id="hours" placeholder="Soak hours (2)"></div>
-<h2>Seed</h2><input id="seed" placeholder="Empty = new random. Type a seed from a report to repeat that run">
-<h2>Network faults to try (Network suite)</h2><input id="presetsList" placeholder="Empty = the default set; or file names, comma separated">
-<h2>Offline load: small test media</h2><input id="sampleImage" placeholder="Path of a small photo"><input id="sampleVideo" placeholder="Path of a small video" style="margin-top:6px">
-<h2>Explore: sessions and auditions by name</h2><textarea id="sessions" rows="2" placeholder="Sessions, one per line"></textarea><textarea id="auditions_text" rows="2" style="margin-top:6px" placeholder="Auditions, one per line"></textarea>
-<h2>Camera</h2><select id="camera"></select>
-<h2>Test project words</h2><input id="words" placeholder="Extra words that mark a project as a test project, comma separated"><button class="small" onclick="saveWords()" style="margin-top:6px">Save words</button>
-</details></section>
-<div id="warn" class="fix"></div>
-<div><button id="start" onclick="start()" style="font-size:18px">Start</button> <button class="stop" onclick="stop()">Stop</button> <button id="again" onclick="again()" style="display:none;background:#2f6fb0">Run again with the same seed</button></div>
-</div></div>
-<div>
-<div class="banner" id="banner">A test is running. Do not use the mouse or keyboard on this Mac until it finishes.</div>
-<section><h2 id="title">No test is running</h2><div id="verdict" class="big"></div><div id="now"></div><div id="summary"></div><div id="results"></div>
-<h2>Log</h2><pre id="log"></pre><div id="report"></div><button class="small" onclick="openReports()" style="margin-top:10px">Open the reports folder</button></section></div>
-</main><script>
-let info={},catalog={projects:[]},checked=new Set(),allowReal=new Set(),presets={},lastSeed='',active='quick';
-const $=id=>document.getElementById(id);
-const PRESETS={quick:['Quick check (about 15 min)','Two short auditions in each ticked session.',{suite:'realistic',auditions:'2',profile:'short',mode:'online'}],
- normal:['Normal (about 1 hour)','Six auditions per session, mixed take lengths.',{suite:'realistic',auditions:'6',profile:'mixed',mode:'online'}],
- chaos:['Break it (about 1 hour)','Random sabotage: bad network, button spam, app killed. Crashes are saved as evidence.',{suite:'chaos',rounds:'25',profile:'short'}],
- overnight:['Overnight','Chaos for hours, all take lengths.',{suite:'chaos',rounds:'120',profile:'mixed'}]};
-function preset(k){active=k;const v=PRESETS[k][2];$('suite').value=v.suite;$('auditions').value=v.auditions||'';$('rounds').value=v.rounds||'';$('profile').value=v.profile||'mixed';$('mode').value=v.mode||'online';
- $('presetText').textContent=PRESETS[k][1];document.querySelectorAll('#presets button').forEach(b=>b.classList.toggle('on',b.dataset.k==k));suiteChanged();}
-function suiteChanged(){$('suiteText').textContent=info.suites&&info.suites[$('suite').value]?info.suites[$('suite').value][1]:'';estimate();}
-let updInfo=null;
-function updUI(u){updInfo=u;$('ver').textContent='version '+u.current;const b=$('updBtn');
- if(u.available){b.textContent='Update to '+u.latest;b.style.background='#e08a00';$('updText').textContent=u.notes?u.notes:'A new version is available';}
- else if(u.error){b.textContent='Update';b.style.background='#2f6fb0';$('updText').textContent=u.error;}
- else{b.textContent='Update';b.style.background='#2f6fb0';$('updText').textContent='You have the latest version ('+u.current+')';}}
-async function checkUpdate(){updUI(await (await fetch('/api/update')).json());}
-async function updateClick(){$('updText').textContent='Checking for updates...';await checkUpdate();
- if(updInfo&&updInfo.available&&confirm('Update to '+updInfo.latest+' now? The tester restarts by itself and keeps your collected projects, settings and reports.'))await applyUpdate();}
-async function applyUpdate(){$('updText').textContent='Updating...';$('updBtn').disabled=true;
- const r=await (await fetch('/api/update/apply',{method:'POST',body:'{}'})).json();$('updText').textContent=r.message;$('updBtn').disabled=false;if(r.ok){setTimeout(()=>location.reload(),6000);}}
-async function load(){checkUpdate();info=await (await fetch('/api/info')).json();
-
- $('suite').innerHTML=Object.entries(info.suites).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join('');
- $('camera').innerHTML='<option value="">Built-in camera (default)</option>'+info.cameras.filter(c=>c.usable&&!c.built_in).map(c=>`<option>${c.name}</option>`).join('');
- $('presets').innerHTML=Object.entries(PRESETS).map(([k,v])=>`<button data-k="${k}" onclick="preset('${k}')">${v[0]}</button>`).join('');
- $('setup').innerHTML=info.setup.map(s=>`<div class="${s[0]?'ok':'fix'}">${s[0]?'OK':'FIX'}: ${s[1]} ${s[0]?'':fixButton(s[1])}</div>`).join('');
- $('words').value=(info.words_extra||[]).join(', ');preset('quick');await loadCatalog();}
-function fixButton(t){if(/Accessibility/.test(t))return `<button class="small" onclick="fix('accessibility')">Open the setting</button>`;if(/camera/i.test(t))return `<button class="small" onclick="fix('camera')">Open the setting</button>`;return '';}
-async function fix(w){await fetch('/api/fix',{method:'POST',body:JSON.stringify({what:w})});}
-async function loadCatalog(){catalog=await (await fetch('/api/catalog')).json();drawTree();}
-let found=null;async function search(){const q=$('find').value.trim();if(!q){found=null;drawTree();return;}const r=await (await fetch('/api/search',{method:'POST',body:JSON.stringify({q})})).json();found=new Set(r.ids);drawTree();}
-function drawTree(){const q=$('find').value.trim().toLowerCase();const t=$('tree');if(!catalog.projects.length){t.innerHTML='<small>Nothing collected yet.</small>';updatePicked();return;}
- t.innerHTML=catalog.projects.map(p=>{const ss=p.sessions.filter(s=>!q||(found?found.has(s.id):(p.name+' '+s.name).toLowerCase().includes(q)));if(!ss.length)return '';
- const lock=!p.is_test;return `<div class="proj ${lock?'grey':''}">${p.name} ${lock?`<small>(not a test project) <label><input type="checkbox" ${allowReal.has(p.id)?'checked':''} onchange="allow('${p.id}',this.checked)" style="width:auto"> use anyway</label></small>`:''}</div>`+
- ss.map(s=>{const dis=(!s.usable)||(lock&&!allowReal.has(p.id));return `<div class="sess ${dis?'grey':''}"><label><input type="checkbox" style="width:auto" ${dis?'disabled':''} ${checked.has(s.id)?'checked':''} onchange="tick('${s.id}',this.checked)"> ${s.name} <small>${s.usable?(s.talents.length+(s.talents.length==1?' talent':' talents')):'no talents scheduled'}</small></label></div>`}).join('')}).join('');updatePicked();}
-function fuzzy(q,text){let i=0;for(const c of text){if(c===q[i])i++;if(i===q.length)return true;}return false;}
-function tick(id,on){on?checked.add(id):checked.delete(id);updatePicked();}
-function allow(id,on){on?allowReal.add(id):allowReal.delete(id);if(!on)catalog.projects.filter(p=>p.id==id).forEach(p=>p.sessions.forEach(s=>checked.delete(s.id)));drawTree();}
-function selectAll(on){checked.clear();if(on)catalog.projects.forEach(p=>{if(p.is_test||allowReal.has(p.id))p.sessions.forEach(s=>{if(s.usable)checked.add(s.id)})});drawTree();}
-async function randomN(){const r=await (await fetch('/api/random',{method:'POST',body:JSON.stringify({count:5})})).json();checked.clear();r.ids.forEach(i=>checked.add(i));drawTree();}
-function updatePicked(){$('picked').textContent=checked.size+' session(s) ticked. '+(catalog.collected_at?'Collected '+catalog.collected_at.replace('T',' ')+(catalog.complete?'':' (not complete)'):'');estimate();}
-async function saveWords(){await fetch('/api/settings',{method:'POST',body:JSON.stringify({test_words:$('words').value.split(',').map(x=>x.trim()).filter(Boolean)})});await loadCatalog();}
-async function collect(){await fetch('/api/collect',{method:'POST',body:JSON.stringify({limit:$('limit').value})});}
-async function collectStop(){await fetch('/api/collect-stop',{method:'POST'});}
-function options(){return {picked:JSON.stringify([...checked]),allow_real:JSON.stringify([...allowReal]),auditions:$('auditions').value,rounds:$('rounds').value,hours:$('hours').value,profile:$('profile').value,mix:$('mix').value,mode:$('mode').value,seed:$('seed').value,presets:$('presetsList').value,sample_image:$('sampleImage').value,sample_video:$('sampleVideo').value,sessions:$('sessions').value,auditions_text:$('auditions_text').value};}
-async function estimate(){if(!info.suites)return;const r=await (await fetch('/api/estimate',{method:'POST',body:JSON.stringify({suite:$('suite').value,options:options()})})).json();
- $('estimate').innerHTML=r.text||'';$('warn').textContent=r.problem||'';$('start').disabled=!!r.problem&&r.blocking;}
-async function start(){const r=await fetch('/api/start',{method:'POST',body:JSON.stringify({suite:$('suite').value,camera:$('camera').value,options:options()})});
- if(!r.ok){const e=await r.json();$('warn').textContent=e.error||'Could not start';}}
-async function openReports(){await fetch('/api/open-reports',{method:'POST',body:'{}'});}
-async function stop(){await fetch('/api/stop',{method:'POST'});}
-function again(){$('seed').value=lastSeed;start();}
-let APPS=[];
-function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
-async function appsList(){const r=await (await fetch('/api/apps')).json();APPS=r.running.concat(r.installed);
- const row=(a,i,run)=>{const sel=r.selected==a.path;
-  return '<div class="app'+(sel?' sel':'')+'" '+(run?'onclick="pick('+i+')"':'')+'><input type="radio" style="width:auto" '+(sel?'checked ':'')+(run?'':'disabled')+'> <b>'+esc(a.name)+'</b> <span class="kind '+a.kind+'">'+a.label+'</span> '+
-   (run?'<small>running (pid '+a.pid+')</small>':'<small>not open</small> <button class="small" onclick="event.stopPropagation();openApp('+i+')">Open it</button>')+'</div>';};
- $('apps').innerHTML=r.running.length?r.running.map((a,i)=>row(a,i,true)).join(''):'<div class="fix">No Studio app is running. Open one below, or open Studio yourself.</div>';
- $('appsNot').innerHTML=r.installed.length?'<small>Installed, not open:</small>'+r.installed.map((a,i)=>row(a,r.running.length+i,false)).join(''):'';
- const sel=r.selected_row;$('gate').style.display=sel?'block':'none';
- let warn=!sel?'Choose a Studio app to continue.':(!r.selected_running?'The chosen Studio is not open. The tester opens it when you start, and opens it again if it closes during a test.':'');
- if(sel&&sel.kind=='production')warn='Production is chosen: only Collect, Smoke and Explore (they only look) are allowed. Recording tests need the Test build.';
- $('appWarn').textContent=warn;
- if(window.lastSel!==r.selected){window.lastSel=r.selected;estimate();}}
-async function pick(i){const e=await (await fetch('/api/select-app',{method:'POST',body:JSON.stringify({path:APPS[i].path})})).json();if(e.error)$('appWarn').textContent=e.error;appsList();}
-async function openApp(i){await fetch('/api/open-app',{method:'POST',body:JSON.stringify({path:APPS[i].path})});}
-async function tick2(){appsList();
- const c=await (await fetch('/api/collect-state')).json();if(c.text)$('collectState').textContent=c.text;if(c.just_done){await loadCatalog();}
- $('collectBtn').disabled=c.running;
- const s=await (await fetch('/api/state')).json();if(!s.suite)return;
- const running=!s.finished;$('banner').style.display=running?'block':'none';
- $('title').textContent=(running?'Running: ':'Finished: ')+s.suite;
- const active=s.results.find(r=>r.status=='running');$('now').innerHTML=active?`Now: <b>${active.name}</b>`:'';
- $('verdict').innerHTML=running?'':(s.counts.failed?'<span style="color:#c0392b">FAIL</span>':(s.counts.passed?'<span style="color:#2e8b57">PASS</span>':'NOTHING RAN'));
- $('summary').innerHTML=`<b>${s.counts.passed}</b> passed, <b>${s.counts.failed}</b> failed, <b>${s.counts.skipped}</b> skipped, ${s.counts.waiting+s.counts.running} to go<br><small>Camera: ${s.camera||'none'} (${s.camera_reason})</small>`;
- $('results').innerHTML=s.results.map(r=>`<div class="row"><span class="tag ${r.status}">${r.status.toUpperCase()}</span><span>${r.name}<br><small>${r.message||''}</small></span></div>`).join('');
- $('log').textContent=s.log.join('\\n');const seedLine=s.log.find(l=>/seed \\d+/.test(l));if(seedLine)lastSeed=(seedLine.match(/seed (\\d+)/)||[])[1]||lastSeed;
- $('report').innerHTML=s.finished?`<a href="/reports/${s.folder}/report.html" target="_blank">Open the report</a> &nbsp; <button class="small" onclick="copyReport('${s.folder}')">Copy report for developers</button>`:'';
- $('again').style.display=(s.finished&&lastSeed)?'inline-block':'none';$('start').disabled=running;}
-async function copyReport(f){const t=await (await fetch('/reports/'+f+'/results.json')).text();await navigator.clipboard.writeText(t);alert('Copied. Paste it in the message to the developers.');}
-load();setInterval(tick2,1000);setInterval(checkUpdate,300000);
-</script></body></html>"""
+from .page import PAGE  # noqa: E402  (the page lives in page.py)
 
 
 KIND_LABEL = {"test": "Test", "develop": "Develop", "staging": "Staging", "production": "Production"}
@@ -268,6 +133,42 @@ def select_app(path):
     chosen["path"] = path
     ax.TARGET_PATH = path
     return None
+
+
+def classify_login(exists):
+    """What the chosen Studio shows: 'login' (the sign-in screen), 'signed_in' (projects, a session or Audition Mode) or 'unknown'.
+    `exists(name)` says whether a named control is on screen."""
+    if exists("login.signIn") or exists("login.email"):
+        return "login"
+    if any(exists(n) for n in ("nav.projects", "projects.search", "session.title", "capture.record", "queue.tab.all")):
+        return "signed_in"
+    return "unknown"
+
+
+_login_cache = {"at": 0.0, "path": None, "value": None}
+
+
+def login_info(max_age=2.0):
+    """{'state': 'none'|'closed'|'login'|'signed_in'|'unknown', 'detail': sentence} for the chosen Studio (cached for a moment: the page asks often)."""
+    path = chosen["path"]
+    if not path:
+        return {"state": "none", "detail": "No Studio app is chosen yet."}
+    if _login_cache["path"] == path and time.time() - _login_cache["at"] < max_age and _login_cache["value"]:
+        return _login_cache["value"]
+    pid = ax.pid_of(runner.PROCESS_PATTERN)
+    if pid is None:
+        value = {"state": "closed", "detail": "The chosen Studio is not open."}
+    else:
+        try:
+            if not ax.trusted():
+                value = {"state": "unknown", "detail": "Accessibility permission is off, so the tester cannot see Studio's screen."}
+            else:
+                app = ax.App(pid)
+                value = {"state": classify_login(app.exists), "detail": ""}
+        except Exception as error:
+            value = {"state": "unknown", "detail": f"Could not read Studio's screen ({type(error).__name__})."}
+    _login_cache.update(at=time.time(), path=path, value=value)
+    return value
 
 
 def suite_problem(suite):
@@ -311,6 +212,14 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(json.dumps({"builds": find_builds(), "cameras": cameras.list_cameras(),
                                          "suites": {key: [value[0], value[1]] for key, value in suites.SUITES.items()},
                                          "setup": setup_check.checks(), "words_extra": catalog.load_settings().get("test_words", [])}))
+        if self.path == "/guide.pdf":
+            guide = os.path.join(runner.ROOT, "docs", "Studio_Tester_Guide.pdf")
+            if os.path.isfile(guide):
+                with open(guide, "rb") as handle:
+                    return self.send(handle.read(), "application/pdf")
+            return self.send("The PDF guide is not in this install.", "text/plain", 404)
+        if self.path == "/api/login-state":
+            return self.send(json.dumps(login_info()))
         if self.path == "/api/apps":
             return self.send(json.dumps(apps_info()))
         if self.path == "/api/update":
@@ -405,15 +314,30 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(json.dumps({"error": "A test is running. Wait until it finishes (or press Stop) before choosing another Studio app."}), code=409)
             error = select_app(body.get("path") or "")
             return self.send(json.dumps({"error": error}), code=400 if error else 200)
+        if self.path == "/api/focus-app":
+            if chosen["path"]:
+                subprocess.run(["/usr/bin/open", chosen["path"]])           # brings the chosen Studio to the front
+            return self.send("{}")
         if self.path == "/api/open-app":
             path = body.get("path") or ""
             if path in {r["path"] for r in apps_info()["installed"]}:
                 subprocess.run(["/usr/bin/open", path])
             return self.send("{}")
         if self.path == "/api/open-reports":
-            os.makedirs(runner.REPORTS, exist_ok=True)
-            subprocess.run(["/usr/bin/open", runner.REPORTS])
+            visible = share.shared_dir()                                  # the visible Reports folder when the program is hidden
+            folder = visible if visible and os.path.isdir(visible) else runner.REPORTS
+            os.makedirs(folder, exist_ok=True)
+            subprocess.run(["/usr/bin/open", folder])
             return self.send("{}")
+        if self.path == "/api/reveal-report":
+            path = share.zip_for(str(body.get("folder") or ""))
+            if path:
+                share.reveal(path)
+                return self.send(json.dumps({"path": path}))
+            folder = os.path.join(runner.REPORTS, os.path.basename(str(body.get("folder") or "")))      # no shared zip: show the run folder
+            if os.path.isdir(folder):
+                share.reveal(folder)
+            return self.send(json.dumps({"path": folder}))
         if self.path == "/api/fix":
             target = {"accessibility": "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
                       "camera": "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera"}.get(body.get("what"))

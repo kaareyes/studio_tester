@@ -245,3 +245,49 @@ class UpdateButton(unittest.TestCase):
         self.assertIn("async function updateClick()", server.PAGE)
         self.assertIn("You have the latest version", server.PAGE)         # said when there is nothing newer
         self.assertIn("fetch('/api/update/apply',{method:'POST',body:'{}'})", server.PAGE)
+
+
+class Login(unittest.TestCase):
+    def test_classify(self):
+        screens = {"login": {"login.signIn", "login.email"}, "projects": {"nav.projects", "projects.search"}, "capture": {"capture.record"}, "blank": set()}
+        self.assertEqual(server.classify_login(lambda n: n in screens["login"]), "login")
+        self.assertEqual(server.classify_login(lambda n: n in screens["projects"]), "signed_in")
+        self.assertEqual(server.classify_login(lambda n: n in screens["capture"]), "signed_in")
+        self.assertEqual(server.classify_login(lambda n: n in screens["blank"]), "unknown")
+        self.assertEqual(server.classify_login(lambda n: n in (screens["login"] | screens["projects"])), "login")      # the sign-in screen wins
+
+    def test_states_without_a_screen(self):
+        server.chosen["path"] = None
+        server._login_cache.update(at=0.0, path=None, value=None)
+        self.assertEqual(server.login_info()["state"], "none")
+        server.chosen["path"] = "/Applications/Studio (macOS) - Test.app"
+        original = server.ax.pid_of
+        server.ax.pid_of = lambda pattern: None
+        try:
+            self.assertEqual(server.login_info(max_age=0)["state"], "closed")
+        finally:
+            server.ax.pid_of = original
+            server.chosen["path"] = None
+            server._login_cache.update(at=0.0, path=None, value=None)
+
+
+class LoginEndpoint(Base):
+    def test_endpoint_answers(self):
+        status, body = self.call("/api/login-state")
+        self.assertEqual(status, 200)
+        self.assertIn("state", json.loads(body))
+
+
+class GuideInPage(Base):
+    def test_guide_is_in_the_page_and_the_pdf_is_served(self):
+        for text in ("How to use Studio Tester", "You need to log in first", "openGuide()", "guideSeen", "What each button does"):
+            self.assertIn(text, server.PAGE)
+        import urllib.error, urllib.request
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{self.port}/guide.pdf") as response:
+                status, body = response.status, response.read()
+        except urllib.error.HTTPError as error:
+            status, body = error.code, b""
+        self.assertIn(status, (200, 404))                      # 200 when docs/Studio_Tester_Guide.pdf is installed
+        if status == 200:
+            self.assertTrue(body.startswith(b"%PDF"))

@@ -144,6 +144,7 @@ class Run:
         self.stop_requested = False
         self.lines = []
         self.thread = None
+        self.shared_zip = None
 
     def log(self, text):
         self.lines.append(datetime.datetime.now().strftime("%H:%M:%S ") + text)
@@ -169,6 +170,14 @@ class Run:
             faults.reset_all()
             self.finished = datetime.datetime.now()
             self.save()
+            try:
+                from . import share
+                self.shared_zip = share.make_copy(self.run_dir)       # a visible zip next to Studio Tester.command, ready to send
+                if self.shared_zip:
+                    self.log("report zip ready to share: " + self.shared_zip)
+                    self.save()
+            except Exception as error:
+                self.log(f"could not make the shareable zip ({error})")
 
     def _watchdog(self, context):
         """If Studio is closed or crashes while a test runs (and the test is not doing it on purpose), open it again by itself."""
@@ -250,6 +259,7 @@ class Run:
                 "camera_reason": self.camera_reason, "started": self.started.isoformat(timespec="seconds"),
                 "finished": self.finished.isoformat(timespec="seconds") if self.finished else None,
                 "counts": counts, "results": self.results, "log": self.lines[-40:], "folder": os.path.basename(self.run_dir),
+                "shared_zip": os.path.basename(self.shared_zip) if self.shared_zip else None,
                 "options": self.options}
 
     def save(self):
