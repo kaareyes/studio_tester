@@ -53,6 +53,8 @@ pre{font:12px/1.5 Menlo,monospace;background:#0f172a;color:#d6e0f5;padding:12px;
 .gstep{display:flex;gap:14px;padding:12px 14px;border:1px solid var(--line);border-radius:13px;margin:9px 0}.gstep .no{flex:none;width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:800}
 .gstep>div>b:first-child{display:block;font-size:15px;margin-bottom:2px}.gtable{width:100%;border-collapse:collapse;font-size:13px}.gtable td{border-bottom:1px solid #eef2f8;padding:7px 8px;vertical-align:top}.gtable td:first-child{white-space:nowrap;font-weight:700;width:200px}
 .k{display:inline-block;background:#eef2fa;border:1px solid #d5ddee;border-radius:6px;padding:0 7px;font-size:12px;font-weight:700}
+.pausebox{position:fixed;inset:0;background:rgba(15,23,42,.62);display:none;align-items:center;justify-content:center;z-index:70}.pbox{background:#fff;border-radius:20px;max-width:480px;width:92%;padding:30px 32px;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.4)}
+.pbox .pi{font-size:54px;line-height:1}.pbox h2{margin:8px 0 6px;font-size:24px}.pbox .row2{justify-content:center;margin-top:18px}
 .empty{text-align:center;color:var(--muted);padding:26px 10px}.empty .e{font-size:40px}
 </style></head><body>
 <header class="top"><div class="logo">ST</div><h1>Studio Tester</h1><span class="chip" id="ver">version ...</span>
@@ -89,10 +91,10 @@ pre{font:12px/1.5 Menlo,monospace;background:#0f172a;color:#d6e0f5;padding:12px;
 <div class="w"><label>Explore: auditions by name (one per line)</label><textarea id="auditions_text" rows="2"></textarea></div>
 <div class="w"><label>Test project words (a project with one of these words is a test project)</label><div class="row2"><input id="words" placeholder="qa, test, sim, stress (comma separated)" style="flex:1"><button class="small" onclick="saveWords()">Save words</button></div></div>
 </div></details></section>
-<div class="startbar"><div id="warn" class="warn"></div><button id="start" class="go" onclick="start()">&#9654; Start</button><button class="stop" onclick="stop()">&#9632; Stop</button><button id="again" class="ghost" onclick="again()" style="display:none">&#8635; Run again with the same seed</button></div>
+<div class="startbar"><div id="warn" class="warn"></div><button id="start" class="go" onclick="start()">&#9654; Start</button><button id="pauseBtn" class="ghost" style="display:none" onclick="pauseRun()">&#9208; Pause</button><button id="stopBtn" class="stop" onclick="stop()">&#9632; Stop</button><button id="again" class="ghost" onclick="again()" style="display:none">&#8635; Run again with the same seed</button></div>
 </div></div>
 <div>
-<div class="banner" id="banner">&#9888; A test is running. Do not use the mouse or keyboard on this Mac until it finishes.</div>
+<div class="banner" id="banner">&#9888; A test is running. Do not use the mouse or keyboard on this Mac until it finishes. <u>To pause: hold the <b>Esc</b> key for 3 seconds</u>, or press <b>Pause</b>.</div>
 <section class="card" id="runCard"><div class="hero"><div class="badge" id="badge">&#9654;</div><div style="flex:1"><h2 id="title">Ready</h2><div id="verdict"></div><div id="now" class="muted">Choose a Studio app, sign in, tick sessions and press Start.</div></div></div>
 <div class="bar" id="runBar" style="display:none"><span style="width:0"></span></div><div class="muted" id="runMeta" style="margin-top:6px"></div>
 <div class="tiles" id="tiles" style="display:none"></div>
@@ -101,6 +103,9 @@ pre{font:12px/1.5 Menlo,monospace;background:#0f172a;color:#d6e0f5;padding:12px;
 <div class="row2" style="margin-top:14px" id="report"></div>
 <div class="row2" style="margin-top:10px"><button class="small ghost" onclick="openReports()">Open the reports folder</button></div></section>
 </div></main>
+<div class="pausebox" id="pauseBox"><div class="pbox"><div class="pi">&#9208;</div><h2>Testing is paused</h2><p id="pauseWhy" style="margin:0 0 8px;font-weight:600"></p>
+<p class="muted">Nothing more is clicked while it is paused. Studio keeps what it is doing: a take that is already recording keeps recording.</p>
+<div class="row2"><button class="go" onclick="resumeRun()">&#9654; Continue</button><button class="stop" onclick="cancelRun()">&#9632; Cancel testing</button></div></div></div>
 <div class="guide" id="guide" onclick="if(event.target===this)closeGuide()"><div class="gbox"><div class="ghead"><span style="font-size:26px">&#128214;</span><h2>How to use Studio Tester</h2><a href="/guide.pdf" target="_blank" style="text-decoration:none"><button class="small ghost">Open the PDF guide</button></a><button class="small" onclick="closeGuide()">Close</button></div>
 <div class="gbody">
 <div class="note blue"><b>What is this?</b> A program that uses the Studio app by itself, like a real casting user: it records auditions, goes Back, loses the internet and tries to break things. After every step it checks that no video, photo or slate was lost or put in the wrong place. You press <b>Start</b> and read <b>PASS</b> or <b>FAIL</b>.</div>
@@ -119,14 +124,16 @@ pre{font:12px/1.5 Menlo,monospace;background:#0f172a;color:#d6e0f5;padding:12px;
 <tr><td>Show the Studio window</td><td>Brings Studio to the front, so you can sign in.</td></tr>
 <tr><td>Collect projects from the app</td><td>Reads the project and session list from Studio (only looking).</td></tr>
 <tr><td>Tick all usable / Untick all / Tick 5 random</td><td>Quick ways to choose sessions.</td></tr>
-<tr><td>Start / Stop</td><td>Starts the test. Stop ends it and leaves Studio normal (no offline mode, no test faults).</td></tr>
+<tr><td>Start</td><td>Starts the test.</td></tr>
+<tr><td>Pause / Esc held</td><td>Pauses the test. A window asks: <b>Continue</b> or <b>Cancel testing</b>.</td></tr>
+<tr><td>Cancel testing</td><td>Stops the test at once and leaves Studio normal (no offline mode, no test faults, no camera label).</td></tr>
 <tr><td>Run again with the same seed</td><td>Repeats exactly the same random run, to show developers a failure.</td></tr>
 <tr><td>Open the report</td><td>A page with every step, the time and screenshots.</td></tr>
 <tr><td>Show the zip to share</td><td>After every run the tester makes one zip with the whole report. This button shows it in Finder: drag it into Slack or an email. The zips are kept in the <b>Reports</b> folder next to <b>Studio Tester.command</b>.</td></tr>
 <tr><td>Copy report text</td><td>Copies the result as text: paste it in your message.</td></tr>
 <tr><td>Open the reports folder</td><td>Opens the <b>Reports</b> folder with the zip of every run.</td></tr></table>
 <h3>While a test runs</h3>
-<ul><li><b>Do not use the mouse or keyboard.</b> Do not close the Terminal window or Studio.</li><li>If Studio closes or crashes, the tester opens it again and carries on.</li><li>Long runs take hours. The Mac must stay plugged in.</li></ul>
+<ul><li><b>Do not use the mouse or keyboard.</b> Do not close the Terminal window or Studio.</li><li><b>To pause:</b> hold the <b>Esc</b> key for 3 seconds (you hear a sound and this page comes to the front), or press <b>Pause</b>. Then choose <b>Continue</b> or <b>Cancel testing</b>. While paused, nothing more is clicked. A take that is already recording keeps recording.</li><li><b>To cancel:</b> press <b>Cancel testing</b>. It stops at once (not at the end of a long take). The steps not done yet are skipped and Studio is left normal.</li><li>If Studio closes or crashes, the tester opens it again and carries on.</li><li>Long runs take hours. The Mac must stay plugged in.</li></ul>
 <h3>When something fails: what to send the developers</h3>
 <ol><li>Press <b>Show the zip to share</b>. Finder shows a zip with the whole report. Send that file (drag it into Slack).</li><li>You can also press <b>Copy report text</b> and paste it in your message.</li><li>Say which card you ran, and the <b>seed</b> (it is in the log).</li></ol>
 <h3>Common problems</h3>
@@ -190,7 +197,10 @@ async function estimate(){if(!info.suites)return;const r=await (await fetch('/ap
 async function start(){const r=await fetch('/api/start',{method:'POST',body:JSON.stringify({suite:$('suite').value,camera:$('camera').value,options:options()})});
  if(!r.ok){const e=await r.json();$('warn').textContent=e.error||'Could not start';}}
 async function openReports(){await fetch('/api/open-reports',{method:'POST',body:'{}'});}
-async function stop(){await fetch('/api/stop',{method:'POST'});}
+async function stop(){if(window.running&&!confirm('Cancel the test now? It stops at once; the steps not done yet are skipped.'))return;await fetch('/api/cancel',{method:'POST'});}
+async function pauseRun(){await fetch('/api/pause',{method:'POST',body:'{}'});}
+async function resumeRun(){await fetch('/api/resume',{method:'POST',body:'{}'});}
+async function cancelRun(){await fetch('/api/cancel',{method:'POST'});$('pauseBox').style.display='none';}
 function again(){$('seed').value=lastSeed;start();}
 function openGuide(){$('guide').style.display='flex';document.body.style.overflow='hidden';}
 function closeGuide(){$('guide').style.display='none';document.body.style.overflow='';}
@@ -229,8 +239,10 @@ function dur(sec){sec=Math.max(0,Math.round(sec));const h=Math.floor(sec/3600),m
 async function tick2(){appsList();
  const c=await (await fetch('/api/collect-state')).json();if(c.text)$('collectState').textContent=c.text;if(c.just_done){await loadCatalog();}
  $('collectBtn').disabled=c.running;$('collectBar').style.display=c.running?'block':'none';
- const s=await (await fetch('/api/state')).json();if(!s.suite){window.running=false;return;}
+ const s=await (await fetch('/api/state')).json();if(!s.suite){window.running=false;$('pauseBox').style.display='none';return;}
  const running=!s.finished;window.running=running;window.finished=!running;$('banner').style.display=running?'block':'none';
+ const ctl=s.control||{};$('pauseBox').style.display=(running&&ctl.paused)?'flex':'none';$('pauseWhy').textContent=ctl.paused?(ctl.reason==='Esc held'?'You held the Esc key.':'Paused from the page.')+' Paused for '+ctl.paused_for+' s.':'';
+ $('pauseBtn').style.display=running?'inline-block':'none';$('stopBtn').innerHTML=running?'&#9632; Cancel testing':'&#9632; Stop';
  const total=s.results.length,done=s.counts.passed+s.counts.failed+s.counts.skipped,pct=total?Math.round(done*100/total):0;
  $('title').textContent=(running?'Running: ':'Finished: ')+s.suite;
  const act=s.results.find(r=>r.status=='running');$('now').innerHTML=running?(act?'Now: <b>'+esc(act.name)+'</b>':'Starting...'):('Finished at '+s.finished.replace('T',' '));

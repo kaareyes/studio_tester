@@ -10,6 +10,8 @@ from ApplicationServices import (
 )
 import Quartz
 
+from . import control
+
 MAX_DEPTH = 40
 # Studio's rule: `screen.control[.more]`, e.g. `session.enterAuditionMode`, `queue.row.status`, `session.talent.<id>`.
 STUDIO_NAME = re.compile(r"^(?!com\.|org\.|NS|_)[a-z][A-Za-z0-9]*(\.[A-Za-z0-9_-]+)+$")
@@ -271,6 +273,7 @@ class App:
 
 def type_keys(text, delay=0.03):
     """Types text with real key events (what a person does): works in SwiftUI fields where setting the value would not reach the app."""
+    control.checkpoint()
     for char in text:
         for down in (True, False):
             event = Quartz.CGEventCreateKeyboardEvent(None, 0, down)
@@ -281,12 +284,14 @@ def type_keys(text, delay=0.03):
 
 def scroll(dx, dy, x, y):
     """A real mouse-wheel scroll at a point (positive dy scrolls the content up, i.e. towards the end of a list)."""
+    control.checkpoint()
     Quartz.CGEventPost(Quartz.kCGHIDEventTap, Quartz.CGEventCreateMouseEvent(None, Quartz.kCGEventMouseMoved, (x, y), Quartz.kCGMouseButtonLeft))
     event = Quartz.CGEventCreateScrollWheelEvent(None, Quartz.kCGScrollEventUnitLine, 2, int(-dy), int(-dx))
     Quartz.CGEventPost(Quartz.kCGHIDEventTap, event)
 
 
 def click(x, y):
+    control.checkpoint()
     # Move there first, like a hand does: SwiftUI buttons inside scrolling lists ignore a press that was never preceded by the pointer
     # arriving (no hover), so a bare down/up could be lost.
     Quartz.CGEventPost(Quartz.kCGHIDEventTap, Quartz.CGEventCreateMouseEvent(None, Quartz.kCGEventMouseMoved, (x, y), Quartz.kCGMouseButtonLeft))

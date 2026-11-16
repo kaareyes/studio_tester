@@ -12,7 +12,7 @@ import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import ax, cameras, catalog, collect, matcher, profiles, runner, setup_check, share, updater
+from . import ax, cameras, catalog, collect, control, matcher, profiles, runner, setup_check, share, updater
 
 PORT = int(os.environ.get("STUDIO_TESTER_PORT", "8765"))     # a different port lets a second copy run side by side (tests)
 sys.path.insert(0, runner.ROOT)
@@ -344,10 +344,16 @@ class Handler(BaseHTTPRequestHandler):
             if target:
                 subprocess.run(["/usr/bin/open", target])
             return self.send("{}")
-        if self.path == "/api/stop":
+        if self.path in ("/api/stop", "/api/cancel"):
             if current["run"]:
                 current["run"].stop_requested = True
+                control.cancel()                          # takes effect at the next click or wait, not at the end of the step
             return self.send("{}")
+        if self.path == "/api/pause":
+            ok = control.pause("paused from the page")
+            return self.send(json.dumps({"paused": ok}))
+        if self.path == "/api/resume":
+            return self.send(json.dumps({"resumed": control.resume()}))
         self.send("not found", "text/plain", 404)
 
 
@@ -443,6 +449,13 @@ def bind_or_reuse(preferred, make_server=None, probe=None, stopper=None, tries=1
     raise OSError(f"no free port between {preferred} and {preferred + tries - 1}")
 
 
+def esc_pause(port):
+    """Esc was held during a run: pause it, make a sound and bring the page to the front, where Continue / Cancel testing wait."""
+    if control.pause("Esc held"):
+        subprocess.Popen(["/usr/bin/afplay", "/System/Library/Sounds/Funk.aiff"], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+        webbrowser.open(f"http://localhost:{port}")
+
+
 def main():
     try:
         kind, server, port = bind_or_reuse(PORT)
@@ -461,6 +474,7 @@ def main():
         print(f"(Port {PORT} is used by another program, so the tester uses {port}.)")
     print(f"Studio Tester is running. The page: {url}\nKeep this window open while testing. Close it to stop.")
     threading.Timer(1.0, lambda: webbrowser.open(url)).start()
+    control.start_esc_watcher(lambda: bool(current["run"] and not current["run"].finished), lambda: esc_pause(port))
     try:
         server.serve_forever()
     except KeyboardInterrupt:

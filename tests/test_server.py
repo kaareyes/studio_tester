@@ -291,3 +291,16 @@ class GuideInPage(Base):
         self.assertIn(status, (200, 404))                      # 200 when docs/Studio_Tester_Guide.pdf is installed
         if status == 200:
             self.assertTrue(body.startswith(b"%PDF"))
+
+
+class PauseEndpoints(Base):
+    def test_page_has_pause_and_cancel_and_the_endpoints_answer(self):
+        for text in ("Testing is paused", "Cancel testing", "hold the <b>Esc</b> key", "pauseRun()", "resumeRun()", "/api/cancel"):
+            self.assertIn(text, server.PAGE)
+        status, body = self.call("/api/pause", {})
+        self.assertEqual(status, 200)
+        self.assertFalse(json.loads(body)["paused"])                    # no run: nothing to pause
+        status, body = self.call("/api/resume", {})
+        self.assertEqual(status, 200)
+        status, _ = self.call("/api/cancel", {})
+        self.assertEqual(status, 200)

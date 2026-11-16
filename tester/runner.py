@@ -9,7 +9,7 @@ import threading
 import time
 import traceback
 
-from . import cameras
+from . import cameras, control
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPORTS = os.path.join(ROOT, "reports")
@@ -157,6 +157,7 @@ class Run:
         from . import faults, monitor
         context = Context(self.build_path, self.camera, self.run_dir, self.log, self.options)
         context.stop = lambda: self.stop_requested
+        control.begin(threading.current_thread())          # pause / cancel apply to this thread only
         watcher = monitor.Monitor(self.run_dir)
         watcher.start()
         self.watchdog_stop = threading.Event()
@@ -164,6 +165,7 @@ class Run:
         try:
             self._run_tests(context)
         finally:
+            control.end()
             self.watchdog_stop.set()
             # Whatever happened (finished, failed or Stop): no faults, online, no camera label, so the app is left like a person uses it.
             watcher.stop()
@@ -213,6 +215,11 @@ class Run:
             try:
                 function(context)
                 result["status"] = "passed"
+            except control.StopRun:
+                # cancelled by the person (Esc held, or Cancel testing): this step stops where it is, the rest are skipped, cleanup still runs
+                result.update(status="skipped", message="cancelled by the tester")
+                self.stop_requested = True
+                self.log("CANCELLED by the tester during: " + name)
             except Skip as skip:
                 result.update(status="skipped", message=str(skip))
             except Exception as error:
@@ -260,6 +267,7 @@ class Run:
                 "finished": self.finished.isoformat(timespec="seconds") if self.finished else None,
                 "counts": counts, "results": self.results, "log": self.lines[-40:], "folder": os.path.basename(self.run_dir),
                 "shared_zip": os.path.basename(self.shared_zip) if self.shared_zip else None,
+                "control": control.info() if not self.finished else {"paused": False, "reason": "", "paused_for": 0, "cancelling": False},
                 "options": self.options}
 
     def save(self):
