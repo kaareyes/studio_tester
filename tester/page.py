@@ -23,6 +23,7 @@ main{max-width:1320px;margin:6px auto 60px;padding:0 28px;display:grid;grid-temp
 select,input,textarea{font:inherit;width:100%;padding:9px 11px;border:1px solid #cfd8e8;border-radius:9px;background:#fff;color:var(--ink)}select:focus,input:focus,textarea:focus{outline:2px solid rgba(59,111,216,.35);border-color:var(--accent)}
 input[type=checkbox],input[type=radio]{width:auto;accent-color:var(--accent)}
 .app{display:flex;align-items:center;gap:10px;padding:11px 13px;border:1px solid var(--line);border-radius:12px;margin-top:8px;cursor:pointer;transition:.12s}.app:hover{border-color:#b8c6e6;background:#fafbff}
+.app.unsup{opacity:.8;background:#fbf6f5;border:1.5px dashed #e9a7a2;cursor:not-allowed}.app.unsup:hover{background:#fbeeed;border-color:#e9a7a2}
 .app.sel{border-color:var(--accent);background:var(--blue-bg);box-shadow:0 0 0 3px rgba(59,111,216,.12)}.app b{font-size:15px}
 .kind{color:#fff;border-radius:6px;padding:1px 9px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}.kind.test{background:var(--green)}.kind.develop{background:var(--accent)}.kind.staging{background:var(--orange)}.kind.production{background:var(--red)}
 .note{border-radius:11px;padding:11px 14px;margin-top:10px;font-size:13px}.note.red{background:var(--red-bg);color:#8a1f19;border:1px solid #f4c3bf}.note.orange{background:var(--orange-bg);color:#7a4a00;border:1px solid #f3d9a4}.note.green{background:var(--green-bg);color:#0f6b41;border:1px solid #bfe6d0}.note.blue{background:var(--blue-bg);color:#1f3f8f;border:1px solid #cddcf9}
@@ -60,11 +61,13 @@ pre{font:12px/1.5 Menlo,monospace;background:#0f172a;color:#d6e0f5;padding:12px;
 .branch{font:13px/1.4 Menlo,monospace;font-weight:700;background:#fff;color:#14213d;border:1.5px solid #e9a7a2;border-radius:9px;padding:8px 11px;margin:6px 0;word-break:break-all;user-select:all}
 .app .meta{margin-top:3px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}.app .meta .sup{margin-left:0}
 .sup{font-size:11px;font-weight:700;border-radius:6px;padding:1px 8px;margin-left:4px}.sup.ok{background:var(--green-bg);color:#0f6b41}.sup.no{background:var(--red-bg);color:#8a1f19}.sup.wait{background:#eef2fa;color:#5d6b85}
+.stale{display:none;background:#fff4e5;border-bottom:2px solid #e08a00;color:#7a4a00;padding:10px 28px;font-weight:600}
 .empty{text-align:center;color:var(--muted);padding:26px 10px}.empty .e{font-size:40px}
 </style></head><body>
 <header class="top"><div class="logo">ST</div><h1>Studio Tester</h1><span class="chip" id="ver">version ...</span>
 <button class="small ghost" style="margin-left:14px;background:rgba(255,255,255,.14);color:#fff;border:0" onclick="openGuide()">&#10067; How to use</button>
 <div class="upd"><span id="updText"></span><button id="updBtn" class="small" onclick="updateClick()">Update</button></div></header>
+<div class="stale" id="staleBar"></div>
 <div class="steps" id="steps"></div>
 <main>
 <div>
@@ -159,7 +162,7 @@ You can put the settings back after the test.</div>
 <ol><li>Press <b>Show the zip to share</b>. Finder shows a zip with the whole report. Send that file (drag it into Slack).</li><li>You can also press <b>Copy report text</b> and paste it in your message.</li><li>Say which card you ran, and the <b>seed</b> (it is in the log).</li></ol>
 <h3>Common problems</h3>
 <table class="gtable">
-<tr><td>"App version not supported for testing"</td><td>The Studio app you chose is an older build without the button names the tester needs. Testing only works with builds <b>starting from the branch merge/metadata-macos-v2-into-v2-offlinemode</b> (that build and every newer one). Install the latest <b>Studio (macOS) - Test</b> build and choose it.</td></tr>
+<tr><td>"App version not supported for testing"</td><td>An app marked <b>not supported</b> cannot be chosen and has no Open it button: click it to see why. It is an older build without the button names the tester needs. Testing only works with builds <b>starting from the branch merge/metadata-macos-v2-into-v2-offlinemode</b> (that build and every newer one). Install the latest <b>Studio (macOS) - Test</b> build and choose it.</td></tr>
 <tr><td>"You need to log in first"</td><td>Sign in to Studio with the test account. This page continues by itself.</td></tr>
 <tr><td>No Studio app in the list</td><td>Press <b>Open it</b> next to Studio (macOS) - Test, or open Studio yourself.</td></tr>
 <tr><td>Start is grey and a red sentence shows</td><td>Read the sentence: usually no session is ticked, or the disk is too small.</td></tr>
@@ -170,6 +173,7 @@ You can put the settings back after the test.</div>
 <p class="muted" style="margin-top:16px">Rules: test account and test projects only, never real auditions or customers. Do not share reports outside the team (they contain project names).</p>
 </div></div></div>
 <script>
+const PAGE_VERSION='__PAGE_VERSION__';
 let info={},catalog={projects:[]},checked=new Set(),allowReal=new Set(),lastSeed='',active='quick',loginSt={state:'none'},appSel=null;
 const $=id=>document.getElementById(id);
 const PRESETS={quick:['&#9889;','Quick check','about 15 min','Two short auditions in each ticked session.',{suite:'realistic',auditions:'2',profile:'short',mode:'online'}],
@@ -180,7 +184,11 @@ function drawPresets(){$('presets').innerHTML=Object.entries(PRESETS).map(([k,v]
 function preset(k){active=k;const v=PRESETS[k][4];$('suite').value=v.suite;$('auditions').value=v.auditions||'';$('rounds').value=v.rounds||'';$('profile').value=v.profile||'mixed';$('mode').value=v.mode||'online';drawPresets();suiteChanged();}
 function suiteChanged(){$('suiteText').textContent=info.suites&&info.suites[$('suite').value]?info.suites[$('suite').value][1]:'';estimate();}
 let updInfo=null;
-function updUI(u){updInfo=u;$('ver').textContent='version '+u.current;const b=$('updBtn');
+function staleNote(u){const sb=$('staleBar');let msg='';
+ if(u.loaded&&u.current&&u.current!==u.loaded)msg='The tester files on this Mac are version '+u.current+', but the program that is running is still '+u.loaded+'. Close it (Quit Studio Tester, bottom right) and open Studio Tester.command again.';
+ else if(u.loaded&&PAGE_VERSION!=='__PAGE_VERSION__'&&PAGE_VERSION!==u.loaded)msg='This page is from an older version ('+PAGE_VERSION+'); the program is '+u.loaded+'. Reload the page: press Cmd + R.';
+ sb.style.display=msg?'block':'none';sb.textContent=msg;}
+function updUI(u){updInfo=u;$('ver').textContent='version '+(u.loaded||u.current);staleNote(u);const b=$('updBtn');
  if(u.available){b.textContent='Update to '+u.latest;b.style.background='#e08a00';$('updText').textContent=u.notes?u.notes:'A new version is available';}
  else if(u.error){b.textContent='Update';b.style.background='';$('updText').textContent=u.error;}
  else{b.textContent='Update';b.style.background='';$('updText').textContent='You have the latest version ('+u.current+')';}}
@@ -233,14 +241,18 @@ async function quitNow(){$('quitBox').style.display='none';try{await fetch('/api
  $('closedBox').style.display='flex';try{window.close();}catch(e){}}
 function supBadge(x){x=x||{};if(x.state==='ok')return '<span class="sup ok" title="This build has the button names the tester needs">can be tested'+(x.version?' - '+esc(x.version):'')+'</span>';
  if(x.state==='unsupported')return '<span class="sup no">not supported'+(x.version?' - '+esc(x.version):'')+'</span>';if(x.state==='checking')return '<span class="sup wait">checking...</span>';return '';}
+let unsupNote=null;
+function showUnsup(i){unsupNote=APPS[i];applyGate();}
 let APPS=[];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
 async function appsList(){const r=await (await fetch('/api/apps')).json();APPS=r.running.concat(r.installed);appSel=r.selected_row;
  $('checkedAt').textContent='Last checked '+(r.checked_at||'')+(r.searched_at?' - searched the whole Mac at '+r.searched_at:'');
  const row=(a,i,run)=>{const sel=r.selected==a.path;
-  return '<div class="app'+(sel?' sel':'')+'" '+(run?'onclick="pick('+i+')"':'')+'><input type="radio" '+(sel?'checked ':'')+(run?'':'disabled')+'><div style="flex:1;min-width:0"><div><b>'+esc(a.name)+'</b> <span class="kind '+a.kind+'">'+a.label+'</span></div>'+
-   '<div class="meta">'+supBadge(a.support).replace('margin-left:4px','')+' <small class="muted">in '+esc(a.where||'')+'</small> '+(run?'<small class="muted">&middot; running (pid '+a.pid+')</small>':'<small class="muted">&middot; not open</small>')+'</div></div>'+
-   (run?'':'<button class="small" onclick="event.stopPropagation();openApp('+i+')">Open it</button>')+'</div>';};
+  const un=(a.support||{}).state==='unsupported';
+  return '<div class="app'+(sel?' sel':'')+(un?' unsup':'')+'" '+(un?'onclick="showUnsup('+i+')" title="This app cannot be tested: click to see why"':(run?'onclick="pick('+i+')"':''))+'><input type="radio" '+(sel?'checked ':'')+((run&&!un)?'':'disabled')+'><div style="flex:1;min-width:0"><div><b>'+esc(a.name)+'</b> <span class="kind '+a.kind+'">'+a.label+'</span></div>'+
+   '<div class="meta">'+supBadge(a.support).replace('margin-left:4px','')+' <small class="muted">in '+esc(a.where||'')+'</small> '+(run?'<small class="muted">&middot; running (pid '+a.pid+')</small>':'<small class="muted">&middot; not open</small>')+'</div>'+
+   (un?'<div class="meta" style="color:#8a1f19;font-size:12px;font-weight:600">&#9940; Cannot be chosen. Click to see why.</div>':'')+'</div>'+
+   ((run||un)?'':'<button class="small" onclick="event.stopPropagation();openApp('+i+')">Open it</button>')+'</div>';};
  $('apps').innerHTML=r.running.length?r.running.map((a,i)=>row(a,i,true)).join(''):'<div class="note red">No Studio app is running. Open one below, press <b>Refresh</b> to look again, or open Studio yourself.</div>';
  $('appsNot').innerHTML=r.installed.length?'<p class="sub" style="margin:12px 0 0">Installed, not open:</p>'+r.installed.map((a,i)=>row(a,r.running.length+i,false)).join(''):'';
  const sel=r.selected_row;
@@ -253,13 +265,14 @@ async function appsList(){const r=await (await fetch('/api/apps')).json();APPS=r
 async function refreshApps(){const b=$('refreshBtn');b.disabled=true;b.innerHTML='Searching...';$('checkedAt').textContent='Searching this Mac for Studio apps...';
  try{await fetch('/api/refresh-apps',{method:'POST',body:'{}'});}catch(e){}
  b.disabled=false;b.innerHTML='&#8635; Refresh';await appsList();}
-async function pick(i){const e=await (await fetch('/api/select-app',{method:'POST',body:JSON.stringify({path:APPS[i].path})})).json();if(e.error){$('appWarn').style.display='block';$('appWarn').textContent=e.error;}appsList();}
+async function pick(i){unsupNote=null;const e=await (await fetch('/api/select-app',{method:'POST',body:JSON.stringify({path:APPS[i].path})})).json();if(e.error){const x=APPS[i];if(x&&x.support&&x.support.state==='unsupported'){unsupNote=x;applyGate();}else{$('appWarn').style.display='block';$('appWarn').textContent=e.error;}}appsList();}
 async function openApp(i){await fetch('/api/open-app',{method:'POST',body:JSON.stringify({path:APPS[i].path})});}
 async function focusApp(){await fetch('/api/focus-app',{method:'POST',body:'{}'});}
 async function loginTick(){if(!appSel){loginSt={state:'none'};applyGate();return;}try{loginSt=await (await fetch('/api/login-state')).json();}catch(e){}applyGate();}
 function applyGate(){const sel=!!appSel,st=loginSt.state;$('cLogin').style.display=sel?'block':'none';
  const sup=(appSel&&appSel.support)||{};const unsupported=sel&&sup.state==='unsupported';
- $('unsup').style.display=unsupported?'block':'none';$('unsup').innerHTML=unsupported?'<div style="font-size:16px;font-weight:800">&#9940; App version not supported for testing</div><div style="margin-top:8px">This app: <b>'+esc(appSel.name)+'</b>'+(sup.version?', version <b>'+esc(sup.version)+'</b>':'')+'</div><div style="margin-top:8px">Testing only works with builds <b>starting from this branch</b> (that build and every newer one):</div><div class="branch">'+esc(sup.branch||'merge/metadata-macos-v2-into-v2-offlinemode')+'</div><div style="margin-top:6px">Older builds do not have the button names the tester needs. Install the latest <b>Studio (macOS) - Test</b> build from that branch and choose it again.</div>':'';
+ const note=unsupported?appSel:unsupNote;const ns=((note&&note.support)||{});const showNote=!!note&&ns.state==='unsupported';
+ $('unsup').style.display=showNote?'block':'none';$('unsup').innerHTML=showNote?'<div style="font-size:16px;font-weight:800">&#9940; App version not supported for testing</div><div style="margin-top:8px">This app: <b>'+esc(note.name)+'</b>'+(ns.version?', version <b>'+esc(ns.version)+'</b>':'')+'</div><div style="margin-top:8px">Testing only works with builds <b>starting from this branch</b> (that build and every newer one):</div><div class="branch">'+esc(ns.branch||'merge/metadata-macos-v2-into-v2-offlinemode')+'</div><div style="margin-top:6px">Older builds do not have the button names the tester needs. Install the latest <b>Studio (macOS) - Test</b> build from that branch and choose it again.</div>':'';
  if(unsupported){$('cLogin').style.display='none';}
  const needLogin=sel&&st==='login';$('gate').style.display=sel&&!needLogin&&!unsupported?'block':'none';
  let h='';

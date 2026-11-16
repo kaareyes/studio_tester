@@ -1,5 +1,5 @@
 {
- "version": "1.0.8",
- "notes": "Refresh button in step 1 (searches the whole Mac for Studio apps), every copy of an app listed with its location, cleaner app rows; App version not supported check; guide updated",
+ "version": "1.0.9",
+ "notes": "Not-supported Studio apps cannot be chosen or opened (click shows why); the page cannot show a version that is not the running code; Refresh button (searches the whole Mac); App version not supported check; guide updated",
  "min_build": ""
 }

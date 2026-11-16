@@ -425,3 +425,64 @@ class RefreshApps(Base):
     def test_page_has_the_refresh_button(self):
         for text in ("Refresh", "refreshApps()", "searched the whole Mac", "/api/refresh-apps"):
             self.assertIn(text, server.PAGE if text != "/api/refresh-apps" else server.PAGE)
+
+
+class StaleCode(Base):
+    def test_page_carries_the_version_it_was_served_with_and_update_reports_the_loaded_one(self):
+        with urllib.request.urlopen(f"http://127.0.0.1:{self.port}/") as response:
+            html = response.read().decode()
+        self.assertNotIn("__PAGE_VERSION__", html.replace("PAGE_VERSION!=='__PAGE_VERSION__'", ""))     # the placeholder is replaced when served
+        self.assertIn(f"const PAGE_VERSION='{server.LOADED_VERSION}'", html)
+        from unittest import mock
+        with mock.patch.object(server.updater, "check", lambda repo=None: {"current": "1.0.8", "latest": "1.0.8", "available": False}):
+            status, body = self.call("/api/update")
+        self.assertEqual(json.loads(body)["loaded"], server.LOADED_VERSION)
+
+    def test_page_explains_a_stale_program_or_page(self):
+        for text in ("but the program that is running is still", "This page is from an older version", "staleBar", "Reload the page"):
+            self.assertIn(text, server.PAGE)
+
+
+class UnsupportedCannotBeChosen(Base):
+    OLD = "/Applications/Studio (macOS) - Old.app"
+
+    def info(self):
+        return {"running": [], "installed": [{"path": self.OLD, "name": "Studio (macOS) - Old", "kind": "test", "label": "Test", "pid": None,
+                                              "where": "/Applications", "support": {}}], "selected": None, "selected_row": None, "selected_running": False}
+
+    def test_an_unsupported_app_cannot_be_selected(self):
+        from unittest import mock
+        unsupported = {"state": "unsupported", "message": "App version not supported for testing (this app is version 0.9)."}
+        with mock.patch.object(server, "apps_info", self.info), mock.patch.object(server.support, "cached", lambda p: unsupported):
+            status, body = self.call("/api/select-app", {"path": self.OLD})
+        self.assertEqual(status, 400)
+        self.assertIn("App version not supported for testing", body)
+        self.assertIsNone(server.chosen["path"])                         # nothing was chosen
+        self.assertIsNone(server.ax.TARGET_PATH if server.ax.TARGET_PATH == self.OLD else None)
+
+    def test_a_supported_app_is_selected(self):
+        from unittest import mock
+        with mock.patch.object(server, "apps_info", self.info), mock.patch.object(server.support, "cached", lambda p: {"state": "ok"}):
+            status, _ = self.call("/api/select-app", {"path": self.OLD})
+        old_target = server.ax.TARGET_PATH
+        try:
+            self.assertEqual(status, 200)
+            self.assertEqual(server.chosen["path"], self.OLD)
+        finally:
+            server.chosen["path"] = None
+            server.ax.TARGET_PATH = None if old_target == self.OLD else old_target
+
+    def test_an_unsupported_app_is_never_opened_from_the_page(self):
+        from unittest import mock
+        opened = []
+        with mock.patch.object(server, "apps_info", self.info), mock.patch.object(server.subprocess, "run", lambda *a, **k: opened.append(a)):
+            with mock.patch.object(server.support, "cached", lambda p: {"state": "unsupported", "message": "x"}):
+                self.call("/api/open-app", {"path": self.OLD})
+            self.assertEqual(opened, [])                                  # refused
+            with mock.patch.object(server.support, "cached", lambda p: {"state": "ok"}):
+                self.call("/api/open-app", {"path": self.OLD})
+            self.assertEqual(len(opened), 1)                              # a testable app is opened as before
+
+    def test_page_greys_the_row_and_has_no_open_button_for_it(self):
+        for text in (".app.unsup", "' unsup'", "Cannot be chosen. Click to see why.", "showUnsup(", "unsupNote"):
+            self.assertIn(text, server.PAGE)

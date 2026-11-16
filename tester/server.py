@@ -19,6 +19,7 @@ sys.path.insert(0, runner.ROOT)
 import suites  # noqa: E402
 
 current = {"run": None}
+LOADED_VERSION = updater.local_version()      # the version of the code THIS running program was started with (the VERSION file can change on disk later)
 OPTION_KEYS = ("picked", "allow_real", "auditions", "rounds", "hours", "profile", "mix", "mode", "seed", "presets", "sample_image",
                "sample_video", "sessions", "auditions_text")
 
@@ -127,6 +128,8 @@ def select_app(path):
     known = {r["path"] for r in info["running"] + info["installed"]}
     if path not in known:
         return "That Studio app is not running and was not found on this Mac."
+    if support.cached(path)["state"] == "unsupported":
+        return support.cached(path)["message"]                   # an app without the button names cannot be chosen at all
     chosen["path"] = path
     ax.TARGET_PATH = path
     return None
@@ -284,7 +287,7 @@ class Handler(BaseHTTPRequestHandler):
         if not request_allowed(self.headers.get("Host"), self.headers.get("Origin")):
             return self.forbidden()
         if self.path == "/":
-            return self.send(PAGE, "text/html; charset=utf-8")
+            return self.send(PAGE.replace("__PAGE_VERSION__", LOADED_VERSION), "text/html; charset=utf-8")
         if self.path == "/api/info":
             return self.send(json.dumps({"builds": find_builds(), "cameras": cameras.list_cameras(),
                                          "suites": {key: [value[0], value[1]] for key, value in suites.SUITES.items()},
@@ -300,7 +303,9 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/api/apps":
             return self.send(json.dumps(apps_info()))
         if self.path == "/api/update":
-            return self.send(json.dumps(updater.check(catalog.load_settings().get("update_repo"))))
+            result = updater.check(catalog.load_settings().get("update_repo"))
+            result["loaded"] = LOADED_VERSION
+            return self.send(json.dumps(result))
         if self.path == "/api/catalog":
             return self.send(json.dumps(catalog.decorate(catalog.load())))
         if self.path == "/api/collect-state":
@@ -404,8 +409,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send("{}")
         if self.path == "/api/open-app":
             path = body.get("path") or ""
-            if path in {r["path"] for r in apps_info()["installed"]}:
-                subprocess.run(["/usr/bin/open", path])
+            if path in {r["path"] for r in apps_info()["installed"]} and support.cached(path)["state"] != "unsupported":
+                subprocess.run(["/usr/bin/open", path])          # never opened from here when it cannot be tested
             return self.send("{}")
         if self.path == "/api/open-reports":
             visible = share.shared_dir()                                  # the visible Reports folder when the program is hidden
