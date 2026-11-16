@@ -57,6 +57,8 @@ pre{font:12px/1.5 Menlo,monospace;background:#0f172a;color:#d6e0f5;padding:12px;
 .pbox .pi{font-size:54px;line-height:1}.pbox h2{margin:8px 0 6px;font-size:24px}.pbox .row2{justify-content:center;margin-top:18px}
 .quit{position:fixed;right:22px;bottom:22px;z-index:45;background:#fff;color:var(--red);border:1.5px solid #efb8b4;box-shadow:0 4px 14px rgba(20,33,61,.15);padding:9px 16px}.quit:hover{background:var(--red-bg)}
 .closed{position:fixed;inset:0;background:var(--bg);z-index:99;display:none;align-items:center;justify-content:center;text-align:center}.closed .cb{max-width:520px;padding:30px}.closed .e{font-size:64px}
+.branch{font:13px/1.4 Menlo,monospace;font-weight:700;background:#fff;color:#14213d;border:1.5px solid #e9a7a2;border-radius:9px;padding:8px 11px;margin:6px 0;word-break:break-all;user-select:all}
+.sup{font-size:11px;font-weight:700;border-radius:6px;padding:1px 8px;margin-left:4px}.sup.ok{background:var(--green-bg);color:#0f6b41}.sup.no{background:var(--red-bg);color:#8a1f19}.sup.wait{background:#eef2fa;color:#5d6b85}
 .empty{text-align:center;color:var(--muted);padding:26px 10px}.empty .e{font-size:40px}
 </style></head><body>
 <header class="top"><div class="logo">ST</div><h1>Studio Tester</h1><span class="chip" id="ver">version ...</span>
@@ -66,7 +68,7 @@ pre{font:12px/1.5 Menlo,monospace;background:#0f172a;color:#d6e0f5;padding:12px;
 <main>
 <div>
 <section class="card" id="cApp"><h2><span class="n">1</span>Choose the Studio app</h2><p class="sub">These Studio apps are running now. Click the one to test.</p>
-<div id="apps"></div><div id="appsNot"></div><div id="appWarn" class="note orange" style="display:none"></div></section>
+<div id="apps"></div><div id="appsNot"></div><div id="unsup" class="note red" style="display:none"></div><div id="appWarn" class="note orange" style="display:none"></div></section>
 <section class="card" id="cLogin" style="display:none"><div id="loginBox"></div></section>
 <div id="gate" style="display:none">
 <section class="card" id="cMac"><h2>This Mac</h2><div class="chips" id="setup"></div></section>
@@ -155,6 +157,7 @@ You can put the settings back after the test.</div>
 <ol><li>Press <b>Show the zip to share</b>. Finder shows a zip with the whole report. Send that file (drag it into Slack).</li><li>You can also press <b>Copy report text</b> and paste it in your message.</li><li>Say which card you ran, and the <b>seed</b> (it is in the log).</li></ol>
 <h3>Common problems</h3>
 <table class="gtable">
+<tr><td>"App version not supported for testing"</td><td>The Studio app you chose is an older build without the button names the tester needs. Testing only works with builds <b>starting from the branch merge/metadata-macos-v2-into-v2-offlinemode</b> (that build and every newer one). Install the latest <b>Studio (macOS) - Test</b> build and choose it.</td></tr>
 <tr><td>"You need to log in first"</td><td>Sign in to Studio with the test account. This page continues by itself.</td></tr>
 <tr><td>No Studio app in the list</td><td>Press <b>Open it</b> next to Studio (macOS) - Test, or open Studio yourself.</td></tr>
 <tr><td>Start is grey and a red sentence shows</td><td>Read the sentence: usually no session is ticked, or the disk is too small.</td></tr>
@@ -226,17 +229,20 @@ function quitAsk(){$('quitBusy').style.display=window.running?'list-item':'none'
 function quitCancel(){$('quitBox').style.display='none';}
 async function quitNow(){$('quitBox').style.display='none';try{await fetch('/api/quit',{method:'POST',body:'{}'});}catch(e){}
  $('closedBox').style.display='flex';try{window.close();}catch(e){}}
+function supBadge(x){x=x||{};if(x.state==='ok')return '<span class="sup ok" title="This build has the button names the tester needs">can be tested'+(x.version?' - '+esc(x.version):'')+'</span>';
+ if(x.state==='unsupported')return '<span class="sup no">not supported'+(x.version?' - '+esc(x.version):'')+'</span>';if(x.state==='checking')return '<span class="sup wait">checking...</span>';return '';}
 let APPS=[];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
 async function appsList(){const r=await (await fetch('/api/apps')).json();APPS=r.running.concat(r.installed);appSel=r.selected_row;
  const row=(a,i,run)=>{const sel=r.selected==a.path;
-  return '<div class="app'+(sel?' sel':'')+'" '+(run?'onclick="pick('+i+')"':'')+'><input type="radio" '+(sel?'checked ':'')+(run?'':'disabled')+'> <b>'+esc(a.name)+'</b> <span class="kind '+a.kind+'">'+a.label+'</span> '+
+  return '<div class="app'+(sel?' sel':'')+'" '+(run?'onclick="pick('+i+')"':'')+'><input type="radio" '+(sel?'checked ':'')+(run?'':'disabled')+'> <b>'+esc(a.name)+'</b> <span class="kind '+a.kind+'">'+a.label+'</span>'+supBadge(a.support)+' '+
    (run?'<small>running (pid '+a.pid+')</small>':'<small>not open</small> <button class="small" onclick="event.stopPropagation();openApp('+i+')">Open it</button>')+'</div>';};
  $('apps').innerHTML=r.running.length?r.running.map((a,i)=>row(a,i,true)).join(''):'<div class="note red">No Studio app is running. Open one below, or open Studio yourself.</div>';
  $('appsNot').innerHTML=r.installed.length?'<p class="sub" style="margin:12px 0 0">Installed, not open:</p>'+r.installed.map((a,i)=>row(a,r.running.length+i,false)).join(''):'';
  const sel=r.selected_row;
  let warn=!sel?'Choose a Studio app to continue.':(!r.selected_running?'The chosen Studio is not open. The tester opens it when you start, and opens it again if it closes during a test.':'');
  if(sel&&sel.kind=='production')warn='Production is chosen: only Collect, Smoke and Explore (they only look) are allowed. Recording tests need the Test build.';
+ if(sel&&sel.support&&sel.support.state==='unsupported')warn='';
  $('appWarn').style.display=warn?'block':'none';$('appWarn').textContent=warn;
  if(window.lastSel!==r.selected){window.lastSel=r.selected;loginTick();estimate();}
  applyGate();}
@@ -245,16 +251,19 @@ async function openApp(i){await fetch('/api/open-app',{method:'POST',body:JSON.s
 async function focusApp(){await fetch('/api/focus-app',{method:'POST',body:'{}'});}
 async function loginTick(){if(!appSel){loginSt={state:'none'};applyGate();return;}try{loginSt=await (await fetch('/api/login-state')).json();}catch(e){}applyGate();}
 function applyGate(){const sel=!!appSel,st=loginSt.state;$('cLogin').style.display=sel?'block':'none';
- const needLogin=sel&&st==='login';$('gate').style.display=sel&&!needLogin?'block':'none';
+ const sup=(appSel&&appSel.support)||{};const unsupported=sel&&sup.state==='unsupported';
+ $('unsup').style.display=unsupported?'block':'none';$('unsup').innerHTML=unsupported?'<div style="font-size:16px;font-weight:800">&#9940; App version not supported for testing</div><div style="margin-top:8px">This app: <b>'+esc(appSel.name)+'</b>'+(sup.version?', version <b>'+esc(sup.version)+'</b>':'')+'</div><div style="margin-top:8px">Testing only works with builds <b>starting from this branch</b> (that build and every newer one):</div><div class="branch">'+esc(sup.branch||'merge/metadata-macos-v2-into-v2-offlinemode')+'</div><div style="margin-top:6px">Older builds do not have the button names the tester needs. Install the latest <b>Studio (macOS) - Test</b> build from that branch and choose it again.</div>':'';
+ if(unsupported){$('cLogin').style.display='none';}
+ const needLogin=sel&&st==='login';$('gate').style.display=sel&&!needLogin&&!unsupported?'block':'none';
  let h='';
- if(!sel){h='';}
+ if(!sel||unsupported){h='';}
  else if(st==='login'){h='<div class="login"><div class="ic">&#128274;</div><div><h3>You need to log in first</h3><div class="muted">Studio is on the <b>login screen</b>. Sign in with the <b>test account</b> in the Studio window. Your projects and sessions appear here by themselves once you are signed in.</div><div class="note orange"><span class="pulse"></span>Waiting for you to sign in to Studio...</div><div class="row2" style="margin-top:10px"><button class="small" onclick="focusApp()">Show the Studio window</button></div></div></div>';}
  else if(st==='closed'){h='<div class="login"><div class="ic">&#128683;</div><div><h3>Studio is not open</h3><div class="muted">The tester opens it when you start. To sign in first, open it with the button.</div></div></div>';}
  else if(st==='signed_in'){h='<div class="note green" style="margin:0"><b>&#10003; Signed in.</b> Studio is open and ready.</div>';}
  else if(st==='unknown'){h='<div class="note blue" style="margin:0">Could not tell if Studio is signed in'+(loginSt.detail?' ('+esc(loginSt.detail)+')':'')+'. Continue if you are signed in with the test account.</div>';}
  $('loginBox').innerHTML=h;drawSteps();}
 function drawSteps(){const st=loginSt.state,sel=!!appSel,run=window.running,fin=window.finished;
- const S=[['Studio app',sel?'done':'now'],['Sign in',!sel?'':(st==='login'?'bad':(st==='signed_in'||st==='unknown'?'done':'now'))],['Projects',(!sel||st==='login')?'':(checked.size?'done':'now')],['How hard',(!sel||st==='login'||!checked.size)?'':'now'],['Run',run?'now':(fin?'done':'')]];
+ const unsupApp=sel&&appSel&&appSel.support&&appSel.support.state==='unsupported';const S=[['Studio app',unsupApp?'bad':(sel?'done':'now')],['Sign in',!sel?'':(st==='login'?'bad':(st==='signed_in'||st==='unknown'?'done':'now'))],['Projects',(!sel||st==='login')?'':(checked.size?'done':'now')],['How hard',(!sel||st==='login'||!checked.size)?'':'now'],['Run',run?'now':(fin?'done':'')]];
  $('steps').innerHTML=S.map((x,i)=>'<div class="step '+x[1]+'"><span class="dot">'+(x[1]==='done'?'&#10003;':(x[1]==='bad'?'!':(i+1)))+'</span>'+x[0]+'</div>').join('');}
 function dur(sec){sec=Math.max(0,Math.round(sec));const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60;return (h?h+' h ':'')+(m||h?m+' min ':'')+s+' s';}
 async function tick2(){appsList();

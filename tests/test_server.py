@@ -2,6 +2,7 @@ import json
 import threading
 import time
 import unittest
+from unittest import mock
 import urllib.error
 import urllib.request
 from http.server import ThreadingHTTPServer
@@ -116,6 +117,9 @@ class ChooseStudio(Base):
 
     def test_production_only_read_only_suites(self):
         server.chosen["path"] = "/Applications/Studio (macOS).app"
+        patcher = mock.patch.object(server, "support_problem", lambda path: None)      # this test is about the app KIND; support has its own tests
+        patcher.start()
+        self.addCleanup(patcher.stop)
         try:
             self.assertIsNone(server.suite_problem("smoke"))
             self.assertIsNone(server.suite_problem("explore"))

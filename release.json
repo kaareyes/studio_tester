@@ -1,5 +1,5 @@
 {
- "version": "1.0.6",
- "notes": "Overnight safety (Mac kept awake, auto-reopen after a crash, every audition recovers); more recovery scenarios; coverage list for every Studio test; Code checks suite; guide: set the display to never sleep before a long test",
+ "version": "1.0.7",
+ "notes": "App version not supported for testing: the tester checks the chosen Studio app and only builds from the branch merge/metadata-macos-v2-into-v2-offlinemode onward can be tested; guide updated",
  "min_build": ""
 }

@@ -12,7 +12,7 @@ import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import ax, cameras, catalog, collect, control, matcher, profiles, runner, setup_check, share, updater
+from . import ax, cameras, catalog, collect, control, matcher, profiles, runner, setup_check, share, support, updater
 
 PORT = int(os.environ.get("STUDIO_TESTER_PORT", "8765"))     # a different port lets a second copy run side by side (tests)
 sys.path.insert(0, runner.ROOT)
@@ -105,7 +105,8 @@ chosen = {"path": None}
 
 def app_row(path, pid=None):
     kind = runner.kind_of(path)
-    return {"path": path, "name": os.path.basename(path)[:-4], "kind": kind, "label": KIND_LABEL[kind], "pid": pid}
+    return {"path": path, "name": os.path.basename(path)[:-4], "kind": kind, "label": KIND_LABEL[kind], "pid": pid,
+            "support": support.cached(path)}          # can this build be tested? (it has the button names) - read from the app file
 
 
 def apps_info():
@@ -171,11 +172,25 @@ def login_info(max_age=2.0):
     return value
 
 
+def support_problem(path):
+    """A sentence when the app cannot be tested at all (it has no button names), else None."""
+    result = support.cached(path)
+    if result["state"] == "unsupported":
+        return result["message"]
+    if result["state"] == "checking":
+        return "Checking whether this Studio app can be tested (a few seconds)..."
+    return None
+
+
 def suite_problem(suite):
     """A plain sentence when the chosen app cannot run this suite, else None."""
     path = chosen["path"]
     if not path:
         return "Choose a Studio app first (step 1)."
+    if suite != "checks":                       # the code checks do not need the app
+        problem = support_problem(path)
+        if problem:
+            return problem
     kind = runner.kind_of(path)
     if suite not in READ_ONLY_SUITES and kind != "test":
         return (f"This test records auditions and needs the Test build's test tools. You chose Studio ({KIND_LABEL[kind]}). "
@@ -303,6 +318,9 @@ class Handler(BaseHTTPRequestHandler):
             build = chosen["path"]
             if not build:
                 return self.send(json.dumps({"error": "Choose a Studio app first (step 1)."}), code=400)
+            problem = support_problem(build)
+            if problem:
+                return self.send(json.dumps({"error": problem}), code=400)
             try:
                 limit = max(0, min(int(body.get("limit") or 0), 1000))
             except (TypeError, ValueError):

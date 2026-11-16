@@ -72,6 +72,10 @@ Suites on the page: **Build check**, **Smoke**, **Explore**, **Realistic**, **Ch
 Long video, Soak and Friday suites were written from the control names and the old position-based scripts and checked with fake-app
 unit tests only. Run each once on a test project and fix what the real screen does differently before trusting a result.
 
+## Which Studio apps can be tested
+
+Only builds starting from the branch `merge/metadata-macos-v2-into-v2-offlinemode` (that build and every newer one) carry the button names (`.testID(...)`) the tester uses. `tester/support.py` reads the app file (main program and the `.debug.dylib` of a Debug build) and looks for the names the tester cannot work without, so it needs neither a running nor a signed-in app. Each app in the list shows *can be tested* or *not supported* with its version; an unsupported app stops the page at step 1 with **"App version not supported for testing"** and the branch, and Start and Collect refuse it. A build that lacks only newer controls stays testable and lists what is not testable. When the app gets a new control the tester needs, add its name to `CORE` (or `OPTIONAL`) in `tester/support.py`.
+
 ## Page flow
 
 1. **This Mac:** plain OK / FIX lines, with a button that opens the right System Settings page.
