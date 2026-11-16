@@ -23,16 +23,36 @@ def trusted():
     return bool(AXIsProcessTrusted())
 
 
-def pid_of(process_pattern):
-    """The process id of the running Studio build (pgrep pattern), or None."""
-    # Only a process whose command line STARTS with the app's path: the `script` wrapper that the tester (or a person) used to start
-    # Studio also contains the path, but it has no windows, so its accessibility tree is empty.
+TARGET_PATH = None      # the Studio app chosen on the page (path of the .app); None = the first Studio found
+
+
+def _studio_processes(process_pattern):
+    """[(pid, command)] of running Studio apps (not the `script` wrapper the tester starts them with)."""
     out = subprocess.run(["/usr/bin/pgrep", "-fl", "^/.*" + process_pattern + "[^/]*$"], capture_output=True, text=True).stdout.splitlines()
-    # "/usr/bin/script -q <console> <app>" (the tester's own launcher) also matches: skip any wrapper, keep the app itself.
+    found = []
     for line in out:
         pid, _, command = line.partition(" ")
         if not command.startswith(("/usr/bin/script", "script ")):
-            return int(pid)
+            found.append((int(pid), command))
+    return found
+
+
+def app_path_of(command):
+    return command.split(".app/")[0] + ".app" if ".app/" in command else None
+
+
+def list_apps(process_pattern):
+    """[(pid, app path)] of every Studio running now (Test, Develop, Staging, Production...)."""
+    return [(pid, app_path_of(command)) for pid, command in _studio_processes(process_pattern) if app_path_of(command)]
+
+
+def pid_of(process_pattern):
+    """The process id of the running Studio (the chosen app when one is chosen), or None."""
+    # Only a process whose command line STARTS with the app's path: the `script` wrapper that the tester (or a person) used to start
+    # Studio also contains the path, but it has no windows, so its accessibility tree is empty.
+    for pid, command in _studio_processes(process_pattern):
+        if TARGET_PATH is None or command.startswith(TARGET_PATH + "/"):
+            return pid
     return None
 
 

@@ -41,6 +41,31 @@ def studio_database_summary():
     return summary
 
 
+def kind_of(path):
+    """'test' | 'develop' | 'staging' | 'production' from the app's name ('Studio (macOS) - Test.app')."""
+    name = os.path.basename(path or "").lower()
+    for kind in ("test", "develop", "staging"):
+        if name.endswith(f"- {kind}.app"):
+            return kind
+    return "production"
+
+
+def running_build():
+    """Path of the .app of the Studio that is running now, or None."""
+    from . import ax
+    pid = ax.pid_of(PROCESS_PATTERN)
+    if pid is None:
+        return None
+    command = subprocess.run(["/bin/ps", "-o", "command=", "-p", str(pid)], capture_output=True, text=True).stdout.strip()
+    return command.split(".app/")[0] + ".app" if ".app/" in command else None
+
+
+def should_reopen(was_running, alive, expected_gone, gone_for, grace=10):
+    """The watchdog's decision: Studio was running during this run, is not any more, the run is not crashing it on purpose,
+    and it has been gone long enough that a normal restart is not already under way."""
+    return bool(was_running and not alive and not expected_gone and gone_for >= grace)
+
+
 class Skip(Exception):
     """Raise inside a test that cannot run here (no camera, wrong build type): reported as skipped, not failed."""
 
@@ -133,14 +158,39 @@ class Run:
         context.stop = lambda: self.stop_requested
         watcher = monitor.Monitor(self.run_dir)
         watcher.start()
+        self.watchdog_stop = threading.Event()
+        threading.Thread(target=self._watchdog, args=(context,), daemon=True).start()
         try:
             self._run_tests(context)
         finally:
+            self.watchdog_stop.set()
             # Whatever happened (finished, failed or Stop): no faults, online, no camera label, so the app is left like a person uses it.
             watcher.stop()
             faults.reset_all()
             self.finished = datetime.datetime.now()
             self.save()
+
+    def _watchdog(self, context):
+        """If Studio is closed or crashes while a test runs (and the test is not doing it on purpose), open it again by itself."""
+        from . import ax
+        from suites import recover
+        was_running, gone_since = False, None
+        while not self.watchdog_stop.wait(3):
+            alive = ax.pid_of(PROCESS_PATTERN) is not None
+            if alive:
+                was_running, gone_since = True, None
+                continue
+            gone_since = gone_since or time.time()
+            if should_reopen(was_running, alive, recover.EXPECTED["gone"], time.time() - gone_since):
+                try:
+                    context.log("WATCHDOG: Studio is closed: opening it again")
+                    with open(os.path.join(self.run_dir, "incidents.txt"), "a") as handle:
+                        handle.write(time.strftime("%H:%M:%S ") + "Studio was closed during the run: the tester opened it again\n")
+                    context.app = None
+                    context.launch()
+                except Exception as error:
+                    context.log(f"WATCHDOG: could not open Studio ({error})")
+                gone_since = None
 
     def _run_tests(self, context):
         self.log(f"suite {self.suite_name}; build {self.build_path}; camera {self.camera['name'] if self.camera else 'none (' + self.camera_reason + ')'}")

@@ -28,6 +28,7 @@ def _crash_scenario(preset, title, offline=False, long_take=False, kill_after=No
         pk = oracle.last_media_pk()
         began = time.time()
         if preset:
+            recover.EXPECTED["gone"] = True          # the crash is the point of this test: the watchdog waits
             faults.set_preset(preset)
         driver.clear_leftovers(app, context.log)
         driver.add_talents(app, rnd, 1, context.log)

@@ -10,9 +10,9 @@ import threading
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import cameras, catalog, collect, matcher, profiles, runner, setup_check, updater
+from . import ax, cameras, catalog, collect, matcher, profiles, runner, setup_check, updater
 
-PORT = 8765
+PORT = int(os.environ.get("STUDIO_TESTER_PORT", "8765"))     # a different port lets a second copy run side by side (tests)
 sys.path.insert(0, runner.ROOT)
 import suites  # noqa: E402
 
@@ -59,6 +59,9 @@ collect_job = CollectJob()
 
 def estimate_text(suite, options):
     """(text, problem sentence or None, blocking) for the page: how long, how much disk, and what is missing."""
+    problem = suite_problem(suite)
+    if problem:
+        return "", problem, True
     try:
         picked = json.loads(options.get("picked") or "[]")
     except ValueError:
@@ -104,11 +107,14 @@ button.stop{background:#c0392b}button.small{padding:5px 10px;font-size:12px;marg
 .banner{background:#fff4e5;border:2px solid #e08a00;color:#7a4a00;padding:10px 14px;border-radius:8px;font-weight:600;margin-bottom:14px;display:none}
 .big{font-size:34px;font-weight:800}.tree{max-height:340px;overflow:auto;border:1px solid #dde6ef;border-radius:6px;padding:6px}
 .proj{font-weight:600;margin-top:6px}.sess{margin-left:22px;font-weight:400;font-size:13px}.grey{color:#999}
-.presets button{background:#2f6fb0;margin-right:8px}.presets button.on{background:#1f3a5f}details{margin-top:10px}
+.presets button{background:#2f6fb0;margin-right:8px}.presets button.on{background:#1f3a5f}.app{padding:8px;border:1px solid #dde6ef;border-radius:6px;margin-top:6px;cursor:pointer}.app.sel{border-color:#2f6fb0;background:#eef6ff}.kind{color:#fff;border-radius:4px;padding:1px 7px;font-size:12px}.kind.test{background:#2e8b57}.kind.develop{background:#2f6fb0}.kind.staging{background:#b9770e}.kind.production{background:#c0392b}details{margin-top:10px}
 </style></head><body><header>Studio Tester <small id="ver" style="font-weight:400;color:#cfe"></small><span id="upd" style="float:right;font-size:14px;font-weight:400"></span></header><main>
 <div>
-<section><h2>0. This Mac</h2><div id="setup"></div></section>
-<section><h2>1. Projects and sessions</h2>
+<section><h2>1. Choose the Studio app</h2><small>These Studio apps are running now. Click the one to test.</small>
+<div id="apps"></div><div id="appsNot"></div><div id="appWarn" class="fix"></div></section>
+<div id="gate" style="display:none">
+<section><h2>This Mac</h2><div id="setup"></div></section>
+<section><h2>2. Projects and sessions</h2>
 <button onclick="collect()" id="collectBtn" style="margin-top:0">Collect projects from the app</button> <button class="stop" onclick="collectStop()">Stop</button>
 <div><small id="collectState">Not collected yet. Studio must be open and signed in with the test account.</small></div>
 <input id="find" placeholder="Search (typos and capital letters are fine)" oninput="search()" style="margin-top:8px">
@@ -116,9 +122,9 @@ button.stop{background:#c0392b}button.small{padding:5px 10px;font-size:12px;marg
 <button class="small" onclick="randomN()">Tick 5 random</button></div>
 <div id="tree" class="tree"><small>Nothing collected yet.</small></div>
 <small id="picked"></small></section>
-<section><h2>2. How hard?</h2><div class="presets" id="presets"></div><small id="presetText"></small><div id="estimate" style="margin-top:8px"></div>
+<section><h2>3. How hard?</h2><div class="presets" id="presets"></div><small id="presetText"></small><div id="estimate" style="margin-top:8px"></div>
 <details><summary>Advanced</summary>
-<h2>Studio build</h2><select id="build"></select>
+
 <h2>Test suite</h2><select id="suite" onchange="suiteChanged()"></select><small id="suiteText"></small>
 <h2>Take length</h2><select id="profile"><option value="mixed">Mixed (default)</option><option value="short">Short (30 s to 1 min)</option><option value="normal">Normal (1 to 5 min)</option><option value="long">Long (25 to 50 min)</option></select>
 <input id="mix" placeholder="Mix short/normal/long in % (default 50/40/10)" style="margin-top:6px">
@@ -133,11 +139,11 @@ button.stop{background:#c0392b}button.small{padding:5px 10px;font-size:12px;marg
 </details></section>
 <div id="warn" class="fix"></div>
 <div><button id="start" onclick="start()" style="font-size:18px">Start</button> <button class="stop" onclick="stop()">Stop</button> <button id="again" onclick="again()" style="display:none;background:#2f6fb0">Run again with the same seed</button></div>
-</div>
+</div></div>
 <div>
 <div class="banner" id="banner">A test is running. Do not use the mouse or keyboard on this Mac until it finishes.</div>
 <section><h2 id="title">No test is running</h2><div id="verdict" class="big"></div><div id="now"></div><div id="summary"></div><div id="results"></div>
-<h2>Log</h2><pre id="log"></pre><div id="report"></div></section></div>
+<h2>Log</h2><pre id="log"></pre><div id="report"></div><button class="small" onclick="openReports()" style="margin-top:10px">Open the reports folder</button></section></div>
 </main><script>
 let info={},catalog={projects:[]},checked=new Set(),allowReal=new Set(),presets={},lastSeed='',active='quick';
 const $=id=>document.getElementById(id);
@@ -154,7 +160,7 @@ async function checkUpdate(){const u=await (await fetch('/api/update')).json();$
 async function applyUpdate(){if(!confirm('Update the tester now? It restarts by itself and keeps your catalog, settings and reports.'))return;$('upd').textContent='Updating...';
  const r=await (await fetch('/api/update/apply',{method:'POST',body:'{}'})).json();$('upd').textContent=r.message;if(r.ok){setTimeout(()=>location.reload(),6000);}}
 async function load(){checkUpdate();info=await (await fetch('/api/info')).json();
- $('build').innerHTML=info.builds.map(b=>`<option value="${b}">${b.replace(/.*\\/Build\\/Products\\//,'')}</option>`).join('')||'<option value="">No Studio build found</option>';
+
  $('suite').innerHTML=Object.entries(info.suites).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join('');
  $('camera').innerHTML='<option value="">Built-in camera (default)</option>'+info.cameras.filter(c=>c.usable&&!c.built_in).map(c=>`<option>${c.name}</option>`).join('');
  $('presets').innerHTML=Object.entries(PRESETS).map(([k,v])=>`<button data-k="${k}" onclick="preset('${k}')">${v[0]}</button>`).join('');
@@ -167,7 +173,7 @@ let found=null;async function search(){const q=$('find').value.trim();if(!q){fou
 function drawTree(){const q=$('find').value.trim().toLowerCase();const t=$('tree');if(!catalog.projects.length){t.innerHTML='<small>Nothing collected yet.</small>';updatePicked();return;}
  t.innerHTML=catalog.projects.map(p=>{const ss=p.sessions.filter(s=>!q||(found?found.has(s.id):(p.name+' '+s.name).toLowerCase().includes(q)));if(!ss.length)return '';
  const lock=!p.is_test;return `<div class="proj ${lock?'grey':''}">${p.name} ${lock?`<small>(not a test project) <label><input type="checkbox" ${allowReal.has(p.id)?'checked':''} onchange="allow('${p.id}',this.checked)" style="width:auto"> use anyway</label></small>`:''}</div>`+
- ss.map(s=>{const dis=(!s.usable)||(lock&&!allowReal.has(p.id));return `<div class="sess ${dis?'grey':''}"><label><input type="checkbox" style="width:auto" ${dis?'disabled':''} ${checked.has(s.id)?'checked':''} onchange="tick('${s.id}',this.checked)"> ${s.name} <small>${s.usable?(s.talents.length+' talents'):'no talents scheduled'}</small></label></div>`}).join('')}).join('');updatePicked();}
+ ss.map(s=>{const dis=(!s.usable)||(lock&&!allowReal.has(p.id));return `<div class="sess ${dis?'grey':''}"><label><input type="checkbox" style="width:auto" ${dis?'disabled':''} ${checked.has(s.id)?'checked':''} onchange="tick('${s.id}',this.checked)"> ${s.name} <small>${s.usable?(s.talents.length+(s.talents.length==1?' talent':' talents')):'no talents scheduled'}</small></label></div>`}).join('')}).join('');updatePicked();}
 function fuzzy(q,text){let i=0;for(const c of text){if(c===q[i])i++;if(i===q.length)return true;}return false;}
 function tick(id,on){on?checked.add(id):checked.delete(id);updatePicked();}
 function allow(id,on){on?allowReal.add(id):allowReal.delete(id);if(!on)catalog.projects.filter(p=>p.id==id).forEach(p=>p.sessions.forEach(s=>checked.delete(s.id)));drawTree();}
@@ -175,16 +181,32 @@ function selectAll(on){checked.clear();if(on)catalog.projects.forEach(p=>{if(p.i
 async function randomN(){const r=await (await fetch('/api/random',{method:'POST',body:JSON.stringify({count:5})})).json();checked.clear();r.ids.forEach(i=>checked.add(i));drawTree();}
 function updatePicked(){$('picked').textContent=checked.size+' session(s) ticked. '+(catalog.collected_at?'Collected '+catalog.collected_at.replace('T',' ')+(catalog.complete?'':' (not complete)'):'');estimate();}
 async function saveWords(){await fetch('/api/settings',{method:'POST',body:JSON.stringify({test_words:$('words').value.split(',').map(x=>x.trim()).filter(Boolean)})});await loadCatalog();}
-async function collect(){await fetch('/api/collect',{method:'POST',body:JSON.stringify({build:$('build').value})});}
+async function collect(){await fetch('/api/collect',{method:'POST',body:'{}'});}
 async function collectStop(){await fetch('/api/collect-stop',{method:'POST'});}
 function options(){return {picked:JSON.stringify([...checked]),allow_real:JSON.stringify([...allowReal]),auditions:$('auditions').value,rounds:$('rounds').value,hours:$('hours').value,profile:$('profile').value,mix:$('mix').value,mode:$('mode').value,seed:$('seed').value,presets:$('presetsList').value,sample_image:$('sampleImage').value,sample_video:$('sampleVideo').value,sessions:$('sessions').value,auditions_text:$('auditions_text').value};}
 async function estimate(){if(!info.suites)return;const r=await (await fetch('/api/estimate',{method:'POST',body:JSON.stringify({suite:$('suite').value,options:options()})})).json();
  $('estimate').innerHTML=r.text||'';$('warn').textContent=r.problem||'';$('start').disabled=!!r.problem&&r.blocking;}
-async function start(){const r=await fetch('/api/start',{method:'POST',body:JSON.stringify({build:$('build').value,suite:$('suite').value,camera:$('camera').value,options:options()})});
+async function start(){const r=await fetch('/api/start',{method:'POST',body:JSON.stringify({suite:$('suite').value,camera:$('camera').value,options:options()})});
  if(!r.ok){const e=await r.json();$('warn').textContent=e.error||'Could not start';}}
+async function openReports(){await fetch('/api/open-reports',{method:'POST',body:'{}'});}
 async function stop(){await fetch('/api/stop',{method:'POST'});}
 function again(){$('seed').value=lastSeed;start();}
-async function tick2(){
+let APPS=[];
+function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+async function appsList(){const r=await (await fetch('/api/apps')).json();APPS=r.running.concat(r.installed);
+ const row=(a,i,run)=>{const sel=r.selected==a.path;
+  return '<div class="app'+(sel?' sel':'')+'" '+(run?'onclick="pick('+i+')"':'')+'><input type="radio" style="width:auto" '+(sel?'checked ':'')+(run?'':'disabled')+'> <b>'+esc(a.name)+'</b> <span class="kind '+a.kind+'">'+a.label+'</span> '+
+   (run?'<small>running (pid '+a.pid+')</small>':'<small>not open</small> <button class="small" onclick="event.stopPropagation();openApp('+i+')">Open it</button>')+'</div>';};
+ $('apps').innerHTML=r.running.length?r.running.map((a,i)=>row(a,i,true)).join(''):'<div class="fix">No Studio app is running. Open one below, or open Studio yourself.</div>';
+ $('appsNot').innerHTML=r.installed.length?'<small>Installed, not open:</small>'+r.installed.map((a,i)=>row(a,r.running.length+i,false)).join(''):'';
+ const sel=r.selected_row;$('gate').style.display=sel?'block':'none';
+ let warn=!sel?'Choose a Studio app to continue.':(!r.selected_running?'The chosen Studio is not open. The tester opens it when you start, and opens it again if it closes during a test.':'');
+ if(sel&&sel.kind=='production')warn='Production is chosen: only Collect, Smoke and Explore (they only look) are allowed. Recording tests need the Test build.';
+ $('appWarn').textContent=warn;
+ if(window.lastSel!==r.selected){window.lastSel=r.selected;estimate();}}
+async function pick(i){const e=await (await fetch('/api/select-app',{method:'POST',body:JSON.stringify({path:APPS[i].path})})).json();if(e.error)$('appWarn').textContent=e.error;appsList();}
+async function openApp(i){await fetch('/api/open-app',{method:'POST',body:JSON.stringify({path:APPS[i].path})});}
+async function tick2(){appsList();
  const c=await (await fetch('/api/collect-state')).json();if(c.text)$('collectState').textContent=c.text;if(c.just_done){await loadCatalog();}
  $('collectBtn').disabled=c.running;
  const s=await (await fetch('/api/state')).json();if(!s.suite)return;
@@ -200,6 +222,55 @@ async function tick2(){
 async function copyReport(f){const t=await (await fetch('/reports/'+f+'/results.json')).text();await navigator.clipboard.writeText(t);alert('Copied. Paste it in the message to the developers.');}
 load();setInterval(tick2,1000);
 </script></body></html>"""
+
+
+KIND_LABEL = {"test": "Test", "develop": "Develop", "staging": "Staging", "production": "Production"}
+READ_ONLY_SUITES = {"build_check", "smoke", "explore"}      # these only look; every other suite records and needs the Test build's test tools
+chosen = {"path": None}
+
+
+def app_row(path, pid=None):
+    kind = runner.kind_of(path)
+    return {"path": path, "name": os.path.basename(path)[:-4], "kind": kind, "label": KIND_LABEL[kind], "pid": pid}
+
+
+def apps_info():
+    """What the page lists first: the Studio apps running now, the installed ones that are not open, and the one chosen."""
+    running = [app_row(path, pid) for pid, path in ax.list_apps(runner.PROCESS_PATTERN)]
+    running_paths = {r["path"] for r in running}
+    installed = [app_row(p) for p in find_builds() if p not in running_paths]
+    seen, unique = set(), []
+    for row in installed:                         # one row per app name (several copies of one build are not a choice)
+        if row["name"] not in seen and row["name"] not in {r["name"] for r in running}:
+            seen.add(row["name"])
+            unique.append(row)
+    path = chosen["path"]
+    return {"running": running, "installed": unique[:8], "selected": path,
+            "selected_row": app_row(path) if path else None,
+            "selected_running": bool(path and path in running_paths)}
+
+
+def select_app(path):
+    """Remembers the chosen Studio and points every driver at it. Returns an error sentence or None."""
+    info = apps_info()
+    known = {r["path"] for r in info["running"] + info["installed"]}
+    if path not in known:
+        return "That Studio app is not running and was not found on this Mac."
+    chosen["path"] = path
+    ax.TARGET_PATH = path
+    return None
+
+
+def suite_problem(suite):
+    """A plain sentence when the chosen app cannot run this suite, else None."""
+    path = chosen["path"]
+    if not path:
+        return "Choose a Studio app first (step 1)."
+    kind = runner.kind_of(path)
+    if suite not in READ_ONLY_SUITES and kind != "test":
+        return (f"This test records auditions and needs the Test build's test tools. You chose Studio ({KIND_LABEL[kind]}). "
+                "Choose 'Studio (macOS) - Test' in step 1, or pick Smoke or Explore, which only look.")
+    return None
 
 
 def find_builds():
@@ -231,6 +302,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(json.dumps({"builds": find_builds(), "cameras": cameras.list_cameras(),
                                          "suites": {key: [value[0], value[1]] for key, value in suites.SUITES.items()},
                                          "setup": setup_check.checks(), "words_extra": catalog.load_settings().get("test_words", [])}))
+        if self.path == "/api/apps":
+            return self.send(json.dumps(apps_info()))
         if self.path == "/api/update":
             return self.send(json.dumps(updater.check(catalog.load_settings().get("update_repo"))))
         if self.path == "/api/catalog":
@@ -257,8 +330,9 @@ class Handler(BaseHTTPRequestHandler):
             if run and not run.finished:
                 return self.send(json.dumps({"error": "a run is already in progress"}), code=409)
             suite = suites.SUITES.get(body.get("suite"))
+            body["build"] = chosen["path"]
             if not suite or not body.get("build"):
-                return self.send(json.dumps({"error": "choose a build and a suite"}), code=400)
+                return self.send(json.dumps({"error": "Choose a Studio app first (step 1)."}), code=400)
             options = {key: str(value)[:20000] for key, value in (body.get("options") or {}).items() if key in OPTION_KEYS}
             _, problem, blocking = estimate_text(body["suite"], options)
             if blocking:
@@ -283,9 +357,10 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/api/collect":
             if collect_job.running or (current["run"] and not current["run"].finished):
                 return self.send(json.dumps({"error": "something is already running"}), code=409)
-            if not body.get("build"):
-                return self.send(json.dumps({"error": "choose a Studio build first"}), code=400)
-            collect_job.start(body["build"])
+            build = chosen["path"]
+            if not build:
+                return self.send(json.dumps({"error": "Choose a Studio app first (step 1)."}), code=400)
+            collect_job.start(build)
             return self.send("{}")
         if self.path == "/api/collect-stop":
             collect_job.stop = True
@@ -310,6 +385,21 @@ class Handler(BaseHTTPRequestHandler):
             values = catalog.load_settings()
             values["test_words"] = words
             catalog.save_settings(values)
+            return self.send("{}")
+        if self.path == "/api/select-app":
+            if collect_job.running or (current["run"] and not current["run"].finished):
+                # the drivers follow the chosen app: changing it in the middle of a run would make the run drive another Studio
+                return self.send(json.dumps({"error": "A test is running. Wait until it finishes (or press Stop) before choosing another Studio app."}), code=409)
+            error = select_app(body.get("path") or "")
+            return self.send(json.dumps({"error": error}), code=400 if error else 200)
+        if self.path == "/api/open-app":
+            path = body.get("path") or ""
+            if path in {r["path"] for r in apps_info()["installed"]}:
+                subprocess.run(["/usr/bin/open", path])
+            return self.send("{}")
+        if self.path == "/api/open-reports":
+            os.makedirs(runner.REPORTS, exist_ok=True)
+            subprocess.run(["/usr/bin/open", runner.REPORTS])
             return self.send("{}")
         if self.path == "/api/fix":
             target = {"accessibility": "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",

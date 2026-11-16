@@ -1,5 +1,5 @@
 {
  "version": "1.0.0",
- "notes": "First version: one-start installer, Collect and project picker, new suites, Update button",
+ "notes": "First version: choose the Studio app first, one-start installer, Collect and project picker, new suites, Update button",
  "min_build": ""
 }

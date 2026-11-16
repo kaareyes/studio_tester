@@ -12,6 +12,7 @@ from tester.ax import ControlNotFound
 from tester.runner import Skip
 from . import common, driver
 
+EXPECTED = {"gone": False}      # True while a test is crashing / killing Studio on purpose: the watchdog must not reopen it yet
 CRASH_DIRS = [os.path.expanduser("~/Library/Logs/DiagnosticReports")]
 
 
@@ -25,14 +26,15 @@ def command_of(pid):
 
 def is_test_build(pid):
     """Only the Test build may be crashed or driven by the stress suites: the production app can hold real, not yet uploaded takes."""
-    return pid is not None and "Test.app/Contents/MacOS/" in command_of(pid)
+    return pid is not None and runner.kind_of(ax.app_path_of(command_of(pid))) == "test"
 
 
 def kill_app(hard=True):
     """The same as a crash: the app is gone at once, nothing is saved on the way out. Refuses anything but the Test build."""
     pid = ax.pid_of(runner.PROCESS_PATTERN)
     if pid and not is_test_build(pid):
-        raise RuntimeError("the running Studio is not the Test build: the tester will not kill it (quit it yourself, then start the Test build)")
+        raise RuntimeError("the running Studio is not the Test build: the tester will not kill it (choose the Test build on the page)")
+    EXPECTED["gone"] = True
     if pid:
         os.kill(pid, signal.SIGKILL if hard else signal.SIGTERM)
         time.sleep(2)
@@ -68,6 +70,7 @@ def ensure_ready(context, session=None):
     """Makes sure Studio runs, is signed in, and shows the projects list (or the given session). Relaunches after a crash.
     `session` is (id, name). Returns the app. Raises Skip when only a person can fix it (login)."""
     started = time.time()
+    EXPECTED["gone"] = False                 # from here the tester itself brings Studio back
     if not app_alive():
         incident(context, "Studio was not running (crashed or closed): starting it again")
         context.app = None
@@ -76,7 +79,7 @@ def ensure_ready(context, session=None):
             incident(context, "crash report(s) saved: " + ", ".join(crashes))
     running = ax.pid_of(runner.PROCESS_PATTERN)
     if running and not is_test_build(running):
-        raise Skip("the running Studio is not the Test build ('Studio (macOS) - Test'). Quit it and start the Test build: "
+        raise Skip("the chosen Studio is not the Test build ('Studio (macOS) - Test'). Choose the Test build on the page: "
                    "the stress suites never drive another build")
     app = common.app_of(context)
     if app.exists("login.signIn"):
