@@ -1,5 +1,5 @@
 {
- "version": "1.0.3",
- "notes": "New page, sign-in check (log in first), How to use guide inside the page, shareable report zip, Update waits for the restart",
+ "version": "1.0.4",
+ "notes": "Guide with focused screenshots; shareable report zip and sign-in check described",
  "min_build": ""
 }

@@ -65,8 +65,8 @@ pre{font:12px/1.5 Menlo,monospace;background:#0f172a;color:#d6e0f5;padding:12px;
 <div id="apps"></div><div id="appsNot"></div><div id="appWarn" class="note orange" style="display:none"></div></section>
 <section class="card" id="cLogin" style="display:none"><div id="loginBox"></div></section>
 <div id="gate" style="display:none">
-<section class="card"><h2>This Mac</h2><div class="chips" id="setup"></div></section>
-<section class="card"><h2><span class="n">3</span>Projects and sessions</h2><p class="sub">The tester reads the projects from Studio (it only looks, it changes nothing).</p>
+<section class="card" id="cMac"><h2>This Mac</h2><div class="chips" id="setup"></div></section>
+<section class="card" id="cProj"><h2><span class="n">3</span>Projects and sessions</h2><p class="sub">The tester reads the projects from Studio (it only looks, it changes nothing).</p>
 <div class="row2"><select id="limit" style="width:auto"><option value="10">First 10 projects</option><option value="20">First 20 projects</option><option value="50">First 50 projects</option><option value="0">All projects (slow)</option></select>
 <button onclick="collect()" id="collectBtn">Collect projects from the app</button><button class="stop" onclick="collectStop()">Stop</button></div>
 <div class="bar anim" id="collectBar" style="display:none"><span style="width:100%"></span></div>
@@ -74,7 +74,7 @@ pre{font:12px/1.5 Menlo,monospace;background:#0f172a;color:#d6e0f5;padding:12px;
 <input id="find" placeholder="Search projects and sessions (typos and capital letters are fine)" oninput="search()" style="margin-top:12px">
 <div class="row2" style="margin-top:8px"><button class="small ghost" onclick="selectAll(true)">Tick all usable</button><button class="small ghost" onclick="selectAll(false)">Untick all</button><button class="small ghost" onclick="randomN()">Tick 5 random</button></div>
 <div id="tree" class="tree"><small>Nothing collected yet.</small></div><div id="picked" class="muted" style="margin-top:6px"></div></section>
-<section class="card"><h2><span class="n">4</span>How hard?</h2><div class="presets" id="presets"></div><div id="estimate" class="est"></div>
+<section class="card" id="cHard"><h2><span class="n">4</span>How hard?</h2><div class="presets" id="presets"></div><div id="estimate" class="est"></div>
 <details><summary>Advanced</summary><div class="adv">
 <div class="w"><label>Test suite</label><select id="suite" onchange="suiteChanged()"></select><small id="suiteText"></small></div>
 <div><label>Take length</label><select id="profile"><option value="mixed">Mixed (default)</option><option value="short">Short (30 s to 1 min)</option><option value="normal">Normal (1 to 5 min)</option><option value="long">Long (25 to 50 min)</option></select></div>
