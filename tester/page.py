@@ -58,6 +58,7 @@ pre{font:12px/1.5 Menlo,monospace;background:#0f172a;color:#d6e0f5;padding:12px;
 .quit{position:fixed;right:22px;bottom:22px;z-index:45;background:#fff;color:var(--red);border:1.5px solid #efb8b4;box-shadow:0 4px 14px rgba(20,33,61,.15);padding:9px 16px}.quit:hover{background:var(--red-bg)}
 .closed{position:fixed;inset:0;background:var(--bg);z-index:99;display:none;align-items:center;justify-content:center;text-align:center}.closed .cb{max-width:520px;padding:30px}.closed .e{font-size:64px}
 .branch{font:13px/1.4 Menlo,monospace;font-weight:700;background:#fff;color:#14213d;border:1.5px solid #e9a7a2;border-radius:9px;padding:8px 11px;margin:6px 0;word-break:break-all;user-select:all}
+.app .meta{margin-top:3px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}.app .meta .sup{margin-left:0}
 .sup{font-size:11px;font-weight:700;border-radius:6px;padding:1px 8px;margin-left:4px}.sup.ok{background:var(--green-bg);color:#0f6b41}.sup.no{background:var(--red-bg);color:#8a1f19}.sup.wait{background:#eef2fa;color:#5d6b85}
 .empty{text-align:center;color:var(--muted);padding:26px 10px}.empty .e{font-size:40px}
 </style></head><body>
@@ -67,7 +68,8 @@ pre{font:12px/1.5 Menlo,monospace;background:#0f172a;color:#d6e0f5;padding:12px;
 <div class="steps" id="steps"></div>
 <main>
 <div>
-<section class="card" id="cApp"><h2><span class="n">1</span>Choose the Studio app</h2><p class="sub">These Studio apps are running now. Click the one to test.</p>
+<section class="card" id="cApp"><h2><span class="n">1</span>Choose the Studio app<button class="small ghost" id="refreshBtn" onclick="refreshApps()" style="margin-left:auto">&#8635; Refresh</button></h2><p class="sub">These Studio apps are running now. Click the one to test. The list updates by itself; press <b>Refresh</b> to look again, also in other folders.</p>
+<div class="muted" id="checkedAt" style="font-size:12px;margin:-6px 0 4px"></div>
 <div id="apps"></div><div id="appsNot"></div><div id="unsup" class="note red" style="display:none"></div><div id="appWarn" class="note orange" style="display:none"></div></section>
 <section class="card" id="cLogin" style="display:none"><div id="loginBox"></div></section>
 <div id="gate" style="display:none">
@@ -122,7 +124,7 @@ pre{font:12px/1.5 Menlo,monospace;background:#0f172a;color:#d6e0f5;padding:12px;
 <div class="gbody">
 <div class="note blue"><b>What is this?</b> A program that uses the Studio app by itself, like a real casting user: it records auditions, goes Back, loses the internet and tries to break things. After every step it checks that no video, photo or slate was lost or put in the wrong place. You press <b>Start</b> and read <b>PASS</b> or <b>FAIL</b>.</div>
 <h3>Step by step</h3>
-<div class="gstep"><div class="no">1</div><div><b>Choose the Studio app</b>Click <b>Studio (macOS) - Test</b> in the list. Nothing else shows until you choose one. If it is not in the list, press <b>Open it</b> next to it.</div></div>
+<div class="gstep"><div class="no">1</div><div><b>Choose the Studio app</b>Click <b>Studio (macOS) - Test</b> in the list. Nothing else shows until you choose one. If it is not in the list, press <b>Refresh</b> (it also searches other folders), or press <b>Open it</b> next to it.</div></div>
 <div class="gstep"><div class="no">2</div><div><b>Sign in to Studio</b>If this page says <b>"You need to log in first"</b>, go to the Studio window and sign in with the <b>test account</b>. Press <b>Show the Studio window</b> if you cannot find it. This page continues <b>by itself</b> as soon as you are signed in. The tester never types your password.</div></div>
 <div class="gstep"><div class="no">3</div><div><b>Collect the projects</b>Choose <b>First 10 projects</b> (fast) and press <b>Collect projects from the app</b>. The tester reads the projects and sessions. It only looks: it records nothing and changes nothing. Wait until it says <i>Collected ...</i></div></div>
 <div class="gstep"><div class="no">4</div><div><b>Tick the sessions to test</b>Tick one or many sessions. Use the search box if the list is long (typing mistakes are fine). Grey projects are protected (not test projects): leave them alone.</div></div>
@@ -234,10 +236,12 @@ function supBadge(x){x=x||{};if(x.state==='ok')return '<span class="sup ok" titl
 let APPS=[];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
 async function appsList(){const r=await (await fetch('/api/apps')).json();APPS=r.running.concat(r.installed);appSel=r.selected_row;
+ $('checkedAt').textContent='Last checked '+(r.checked_at||'')+(r.searched_at?' - searched the whole Mac at '+r.searched_at:'');
  const row=(a,i,run)=>{const sel=r.selected==a.path;
-  return '<div class="app'+(sel?' sel':'')+'" '+(run?'onclick="pick('+i+')"':'')+'><input type="radio" '+(sel?'checked ':'')+(run?'':'disabled')+'> <b>'+esc(a.name)+'</b> <span class="kind '+a.kind+'">'+a.label+'</span>'+supBadge(a.support)+' '+
-   (run?'<small>running (pid '+a.pid+')</small>':'<small>not open</small> <button class="small" onclick="event.stopPropagation();openApp('+i+')">Open it</button>')+'</div>';};
- $('apps').innerHTML=r.running.length?r.running.map((a,i)=>row(a,i,true)).join(''):'<div class="note red">No Studio app is running. Open one below, or open Studio yourself.</div>';
+  return '<div class="app'+(sel?' sel':'')+'" '+(run?'onclick="pick('+i+')"':'')+'><input type="radio" '+(sel?'checked ':'')+(run?'':'disabled')+'><div style="flex:1;min-width:0"><div><b>'+esc(a.name)+'</b> <span class="kind '+a.kind+'">'+a.label+'</span></div>'+
+   '<div class="meta">'+supBadge(a.support).replace('margin-left:4px','')+' <small class="muted">in '+esc(a.where||'')+'</small> '+(run?'<small class="muted">&middot; running (pid '+a.pid+')</small>':'<small class="muted">&middot; not open</small>')+'</div></div>'+
+   (run?'':'<button class="small" onclick="event.stopPropagation();openApp('+i+')">Open it</button>')+'</div>';};
+ $('apps').innerHTML=r.running.length?r.running.map((a,i)=>row(a,i,true)).join(''):'<div class="note red">No Studio app is running. Open one below, press <b>Refresh</b> to look again, or open Studio yourself.</div>';
  $('appsNot').innerHTML=r.installed.length?'<p class="sub" style="margin:12px 0 0">Installed, not open:</p>'+r.installed.map((a,i)=>row(a,r.running.length+i,false)).join(''):'';
  const sel=r.selected_row;
  let warn=!sel?'Choose a Studio app to continue.':(!r.selected_running?'The chosen Studio is not open. The tester opens it when you start, and opens it again if it closes during a test.':'');
@@ -246,6 +250,9 @@ async function appsList(){const r=await (await fetch('/api/apps')).json();APPS=r
  $('appWarn').style.display=warn?'block':'none';$('appWarn').textContent=warn;
  if(window.lastSel!==r.selected){window.lastSel=r.selected;loginTick();estimate();}
  applyGate();}
+async function refreshApps(){const b=$('refreshBtn');b.disabled=true;b.innerHTML='Searching...';$('checkedAt').textContent='Searching this Mac for Studio apps...';
+ try{await fetch('/api/refresh-apps',{method:'POST',body:'{}'});}catch(e){}
+ b.disabled=false;b.innerHTML='&#8635; Refresh';await appsList();}
 async function pick(i){const e=await (await fetch('/api/select-app',{method:'POST',body:JSON.stringify({path:APPS[i].path})})).json();if(e.error){$('appWarn').style.display='block';$('appWarn').textContent=e.error;}appsList();}
 async function openApp(i){await fetch('/api/open-app',{method:'POST',body:JSON.stringify({path:APPS[i].path})});}
 async function focusApp(){await fetch('/api/focus-app',{method:'POST',body:'{}'});}

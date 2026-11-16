@@ -105,7 +105,7 @@ chosen = {"path": None}
 
 def app_row(path, pid=None):
     kind = runner.kind_of(path)
-    return {"path": path, "name": os.path.basename(path)[:-4], "kind": kind, "label": KIND_LABEL[kind], "pid": pid,
+    return {"path": path, "name": os.path.basename(path)[:-4], "kind": kind, "label": KIND_LABEL[kind], "pid": pid, "where": where_is(path),
             "support": support.cached(path)}          # can this build be tested? (it has the button names) - read from the app file
 
 
@@ -113,14 +113,10 @@ def apps_info():
     """What the page lists first: the Studio apps running now, the installed ones that are not open, and the one chosen."""
     running = [app_row(path, pid) for pid, path in ax.list_apps(runner.PROCESS_PATTERN)]
     running_paths = {r["path"] for r in running}
-    installed = [app_row(p) for p in find_builds() if p not in running_paths]
-    seen, unique = set(), []
-    for row in installed:                         # one row per app name (several copies of one build are not a choice)
-        if row["name"] not in seen and row["name"] not in {r["name"] for r in running}:
-            seen.add(row["name"])
-            unique.append(row)
+    installed = [app_row(p) for p in find_builds() if p not in running_paths]      # every copy is listed; 'where' tells them apart
     path = chosen["path"]
-    return {"running": running, "installed": unique[:8], "selected": path,
+    return {"running": running, "installed": installed[:10], "selected": path, "checked_at": time.strftime("%H:%M:%S"),
+            "searched_at": _found_everywhere["at"],
             "selected_row": app_row(path) if path else None,
             "selected_running": bool(path and path in running_paths)}
 
@@ -198,14 +194,57 @@ def suite_problem(suite):
     return None
 
 
+SKIP_PARTS = ("/Intermediates.noindex/", "/Index.noindex/", "/.Trash/", "/Backups.backupdb/", "/Library/Caches/", "/SourcePackages/", "/ModuleCache")
+_found_everywhere = {"paths": [], "at": None}      # what the last Refresh found with a whole-Mac search
+
+
+def is_studio_app(path):
+    """A real Studio app bundle: a folder 'Studio*.app' with a program inside, not a helper inside another app and not build leftovers."""
+    base = os.path.basename(path.rstrip("/"))
+    return (base.startswith("Studio") and base.endswith(".app") and ".app/" not in path and os.path.isdir(os.path.join(path, "Contents", "MacOS"))
+            and not any(part in path for part in SKIP_PARTS))
+
+
+def search_whole_mac(runner_fn=None):
+    """Spotlight search for Studio apps anywhere on this Mac (Refresh button). Returns the paths found; never raises."""
+    run = runner_fn or (lambda: subprocess.run(["/usr/bin/mdfind", "kMDItemContentType == 'com.apple.application-bundle' && kMDItemFSName == 'Studio*'"],
+                                               capture_output=True, text=True, timeout=20).stdout)
+    try:
+        lines = run().splitlines()
+    except Exception:
+        lines = []
+    return sorted({line.strip() for line in lines if line.strip() and is_studio_app(line.strip())})
+
+
 def find_builds():
-    """Studio .app builds on this Mac, newest first: Xcode's DerivedData, /Applications, and the folders the team uses."""
-    patterns = ["~/Library/Developer/Xcode/DerivedData/*/Build/Products/*/Studio*.app", "/Applications/Studio*.app",
+    """Studio .app builds on this Mac, newest first: Xcode's DerivedData, /Applications, the folders the team uses, and whatever the last
+    Refresh found anywhere else."""
+    patterns = ["~/Library/Developer/Xcode/DerivedData/*/Build/Products/*/Studio*.app", "/Applications/Studio*.app", "~/Applications/Studio*.app",
                 "/private/tmp/claude-501/*/Build/Products/*/Studio*.app", "~/Desktop/Studio*.app", "~/Downloads/Studio*.app"]
     found = []
     for pattern in patterns:
         found += glob.glob(os.path.expanduser(pattern))
+    found += [p for p in _found_everywhere["paths"] if os.path.isdir(p)]
+    found = [p for p in found if is_studio_app(p)]
     return sorted(set(found), key=lambda path: os.path.getmtime(path), reverse=True)
+
+
+def where_is(path):
+    """A short 'in ...' hint, so two apps with the same name can be told apart."""
+    folder = os.path.dirname(path)
+    home = os.path.expanduser("~")
+    if "/DerivedData/" in folder or "_build/Build/Products" in folder or "/Build/Products/" in folder:
+        return "an Xcode build (" + os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(folder)))) + ")"
+    return folder.replace(home, "~", 1) if folder.startswith(home) else folder
+
+
+def refresh_apps():
+    """The Refresh button: look again right now (clears what was remembered about each app) and search the whole Mac."""
+    support._cache.clear()
+    _login_cache.update(at=0.0, value=None)
+    _found_everywhere["paths"] = search_whole_mac()
+    _found_everywhere["at"] = time.strftime("%H:%M:%S")
+    return apps_info()
 
 
 LOCAL_NAMES = ("localhost", "127.0.0.1")
@@ -351,6 +390,8 @@ class Handler(BaseHTTPRequestHandler):
             values["test_words"] = words
             catalog.save_settings(values)
             return self.send("{}")
+        if self.path == "/api/refresh-apps":
+            return self.send(json.dumps(refresh_apps()))
         if self.path == "/api/select-app":
             if collect_job.running or (current["run"] and not current["run"].finished):
                 # the drivers follow the chosen app: changing it in the middle of a run would make the run drive another Studio

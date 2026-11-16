@@ -369,3 +369,59 @@ class OnlyThisPage(Base):
         self.assertEqual(self.raw("/api/start", {"Origin": "https://evil.example"}, b"{}"), 403)
         self.assertEqual(self.raw("/api/info", {"Host": "evil.example"}), 403)
         self.assertEqual(self.raw("/api/pause", {"Origin": "http://localhost:1234"}, b"{}"), 200)  # the page itself (any local port) is fine
+
+
+class RefreshApps(Base):
+    def test_studio_app_filter_keeps_real_apps_only(self):
+        import os, tempfile
+        base = tempfile.mkdtemp()
+        good = os.path.join(base, "Studio (macOS) - Test.app")
+        os.makedirs(os.path.join(good, "Contents", "MacOS"))
+        helper = os.path.join(good, "Contents", "Frameworks", "Studio Helper.app")
+        os.makedirs(os.path.join(helper, "Contents", "MacOS"))
+        junk = os.path.join(base, "Intermediates.noindex", "Studio (macOS) - Test.app")
+        os.makedirs(os.path.join(junk, "Contents", "MacOS"))
+        other = os.path.join(base, "Safari.app")
+        os.makedirs(os.path.join(other, "Contents", "MacOS"))
+        nobinary = os.path.join(base, "Studio Empty.app")
+        os.makedirs(nobinary)
+        self.assertTrue(server.is_studio_app(good))
+        self.assertFalse(server.is_studio_app(helper))          # a helper inside an app
+        self.assertFalse(server.is_studio_app(junk))            # build leftovers
+        self.assertFalse(server.is_studio_app(other))           # not a Studio app
+        self.assertFalse(server.is_studio_app(nobinary))        # no program inside
+
+    def test_whole_mac_search_is_filtered_and_never_raises(self):
+        import os, tempfile
+        good = os.path.join(tempfile.mkdtemp(), "Studio (macOS) - Test.app")
+        os.makedirs(os.path.join(good, "Contents", "MacOS"))
+        found = server.search_whole_mac(lambda: good + "\n/no/such/Studio.app\n\n/Applications/Safari.app\n")
+        self.assertEqual(found, [good])
+        def boom():
+            raise OSError("spotlight is off")
+        self.assertEqual(server.search_whole_mac(boom), [])
+
+    def test_refresh_endpoint_clears_what_was_remembered_and_lists_apps(self):
+        from unittest import mock
+        from tester import support
+        support._cache["x"] = {"signature": (), "result": {"state": "ok"}}
+        with mock.patch.object(server, "search_whole_mac", lambda: []):
+            status, body = self.call("/api/refresh-apps", {})
+        self.assertEqual(status, 200)
+        info = json.loads(body)
+        self.assertIn("installed", info)
+        self.assertIn("checked_at", info)
+        self.assertNotIn("x", support._cache)                       # the remembered answers were dropped: everything is looked at again
+
+    def test_two_apps_with_the_same_name_are_both_listed_with_where(self):
+        from unittest import mock
+        a, b = "/Applications/Studio (macOS) - Test.app", "/Users/x/Library/Developer/Xcode/DerivedData/Studio-abc/Build/Products/Debug/Studio (macOS) - Test.app"
+        with mock.patch.object(server, "find_builds", lambda: [a, b]), mock.patch.object(server.ax, "list_apps", lambda p: []):
+            info = server.apps_info()
+        self.assertEqual([r["path"] for r in info["installed"]], [a, b])
+        self.assertEqual(info["installed"][0]["where"], "/Applications")
+        self.assertIn("Xcode build", info["installed"][1]["where"])
+
+    def test_page_has_the_refresh_button(self):
+        for text in ("Refresh", "refreshApps()", "searched the whole Mac", "/api/refresh-apps"):
+            self.assertIn(text, server.PAGE if text != "/api/refresh-apps" else server.PAGE)

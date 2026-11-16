@@ -1,5 +1,5 @@
 {
- "version": "1.0.7",
- "notes": "App version not supported for testing: the tester checks the chosen Studio app and only builds from the branch merge/metadata-macos-v2-into-v2-offlinemode onward can be tested; guide updated",
+ "version": "1.0.8",
+ "notes": "Refresh button in step 1 (searches the whole Mac for Studio apps), every copy of an app listed with its location, cleaner app rows; App version not supported check; guide updated",
  "min_build": ""
 }

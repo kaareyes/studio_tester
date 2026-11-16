@@ -76,6 +76,8 @@ unit tests only. Run each once on a test project and fix what the real screen do
 
 Only builds starting from the branch `merge/metadata-macos-v2-into-v2-offlinemode` (that build and every newer one) carry the button names (`.testID(...)`) the tester uses. `tester/support.py` reads the app file (main program and the `.debug.dylib` of a Debug build) and looks for the names the tester cannot work without, so it needs neither a running nor a signed-in app. Each app in the list shows *can be tested* or *not supported* with its version; an unsupported app stops the page at step 1 with **"App version not supported for testing"** and the branch, and Start and Collect refuse it. A build that lacks only newer controls stays testable and lists what is not testable. When the app gets a new control the tester needs, add its name to `CORE` (or `OPTIONAL`) in `tester/support.py`.
 
+The **Refresh** button in step 1 looks again right now: it forgets what it knew about each app, rescans it, and searches the whole Mac with Spotlight (`mdfind`) for `Studio*.app`, so a build in any folder is found. Every copy is listed with an *in ...* hint, because two apps can have the same name (for example a current and an old build).
+
 ## Page flow
 
 1. **This Mac:** plain OK / FIX lines, with a button that opens the right System Settings page.
