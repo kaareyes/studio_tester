@@ -1,6 +1,8 @@
 import json
 import threading
+import time
 import unittest
+import urllib.error
 import urllib.request
 from http.server import ThreadingHTTPServer
 
@@ -304,3 +306,62 @@ class PauseEndpoints(Base):
         self.assertEqual(status, 200)
         status, _ = self.call("/api/cancel", {})
         self.assertEqual(status, 200)
+
+
+class QuitButton(Base):
+    def test_page_has_the_quit_button_with_a_warning(self):
+        for text in ("Quit Studio Tester", "Close Studio Tester?", "this page stops working", "Keep it open", "quitNow()", "Studio Tester is closed"):
+            self.assertIn(text, server.PAGE)
+
+    def test_quit_cancels_a_running_test_then_ends_the_program(self):
+        from unittest import mock
+        calls = []
+        class Run:
+            finished = None
+            stop_requested = False
+        run = Run()
+        server.current["run"] = run
+        def finish_soon():
+            calls.append("cancel")
+            run.finished = "done"
+        with mock.patch.object(server.control, "cancel", side_effect=finish_soon), \
+             mock.patch.object(server, "shutdown_process", lambda: calls.append("shutdown")), mock.patch("time.sleep", lambda s: None):
+            server.quit_sequence(wait_seconds=2)
+        server.current["run"] = None
+        self.assertEqual(calls, ["cancel", "shutdown"])                 # cancelled first, the program ended after
+        self.assertTrue(run.stop_requested)
+
+    def test_endpoint_answers_and_starts_the_sequence(self):
+        from unittest import mock
+        started = []
+        with mock.patch.object(server, "quit_sequence", lambda *a, **k: started.append(1)):
+            status, body = self.call("/api/quit", {})
+            time.sleep(0.3)
+        self.assertEqual(status, 200)
+        self.assertTrue(json.loads(body)["quitting"])
+        self.assertEqual(started, [1])
+
+
+class OnlyThisPage(Base):
+    def raw(self, path, headers, body=None):
+        request = urllib.request.Request(f"http://127.0.0.1:{self.port}{path}", data=body, headers=headers)
+        try:
+            with urllib.request.urlopen(request) as response:
+                return response.status
+        except urllib.error.HTTPError as error:
+            return error.code
+
+    def test_decision(self):
+        self.assertTrue(server.request_allowed("localhost:8765", None))
+        self.assertTrue(server.request_allowed("127.0.0.1:8765", "http://localhost:8765"))
+        self.assertFalse(server.request_allowed("localhost:8765", "https://evil.example"))      # another website
+        self.assertFalse(server.request_allowed("evil.example", None))                        # DNS rebinding
+        self.assertFalse(server.request_allowed("localhost.evil.example:8765", None))
+        self.assertFalse(server.request_allowed(None, None))
+
+    def test_foreign_requests_are_refused_and_do_nothing(self):
+        import urllib.error
+        self.assertEqual(self.raw("/api/quit", {"Origin": "https://evil.example"}, b"{}"), 403)     # would have closed the tester
+        self.assertEqual(self.raw("/api/start", {"Origin": "https://evil.example"}, b"{}"), 403)
+        self.assertEqual(self.raw("/api/info", {"Host": "evil.example"}), 403)
+        self.assertEqual(self.raw("/api/pause", {"Origin": "http://localhost:1234"}, b"{}"), 200)  # the page itself (any local port) is fine

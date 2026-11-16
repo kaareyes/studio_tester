@@ -55,6 +55,8 @@ pre{font:12px/1.5 Menlo,monospace;background:#0f172a;color:#d6e0f5;padding:12px;
 .k{display:inline-block;background:#eef2fa;border:1px solid #d5ddee;border-radius:6px;padding:0 7px;font-size:12px;font-weight:700}
 .pausebox{position:fixed;inset:0;background:rgba(15,23,42,.62);display:none;align-items:center;justify-content:center;z-index:70}.pbox{background:#fff;border-radius:20px;max-width:480px;width:92%;padding:30px 32px;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.4)}
 .pbox .pi{font-size:54px;line-height:1}.pbox h2{margin:8px 0 6px;font-size:24px}.pbox .row2{justify-content:center;margin-top:18px}
+.quit{position:fixed;right:22px;bottom:22px;z-index:45;background:#fff;color:var(--red);border:1.5px solid #efb8b4;box-shadow:0 4px 14px rgba(20,33,61,.15);padding:9px 16px}.quit:hover{background:var(--red-bg)}
+.closed{position:fixed;inset:0;background:var(--bg);z-index:99;display:none;align-items:center;justify-content:center;text-align:center}.closed .cb{max-width:520px;padding:30px}.closed .e{font-size:64px}
 .empty{text-align:center;color:var(--muted);padding:26px 10px}.empty .e{font-size:40px}
 </style></head><body>
 <header class="top"><div class="logo">ST</div><h1>Studio Tester</h1><span class="chip" id="ver">version ...</span>
@@ -103,6 +105,14 @@ pre{font:12px/1.5 Menlo,monospace;background:#0f172a;color:#d6e0f5;padding:12px;
 <div class="row2" style="margin-top:14px" id="report"></div>
 <div class="row2" style="margin-top:10px"><button class="small ghost" onclick="openReports()">Open the reports folder</button></div></section>
 </div></main>
+<button class="quit" id="quitBtn" onclick="quitAsk()">&#9211; Quit Studio Tester</button>
+<div class="pausebox" id="quitBox"><div class="pbox" style="text-align:left"><div class="pi" style="text-align:center">&#9888;&#65039;</div><h2 style="text-align:center">Close Studio Tester?</h2>
+<ul style="margin:10px 0 0;padding-left:20px"><li>The <b>tester script stops</b> and <b>this page stops working</b>. It cannot open again by itself.</li>
+<li id="quitBusy" style="display:none;color:#8a1f19;font-weight:700">A test is running right now. It will be <b>cancelled</b> (Studio is left normal and the report is saved).</li>
+<li>Your collected projects, settings and reports are <b>kept</b>.</li>
+<li>To use it again: double-click <b>Studio Tester.command</b> in the Studio Tester folder on your Desktop.</li></ul>
+<div class="row2" style="justify-content:center;margin-top:20px"><button class="stop" onclick="quitNow()">Quit Studio Tester</button><button class="ghost" onclick="quitCancel()">Keep it open</button></div></div></div>
+<div class="closed" id="closedBox"><div class="cb"><div class="e">&#128308;</div><h2>Studio Tester is closed</h2><p class="muted">The script has stopped. You can close this browser tab and the Terminal window.<br>To use it again, double-click <b>Studio Tester.command</b> in the Studio Tester folder on your Desktop.</p></div></div>
 <div class="pausebox" id="pauseBox"><div class="pbox"><div class="pi">&#9208;</div><h2>Testing is paused</h2><p id="pauseWhy" style="margin:0 0 8px;font-weight:600"></p>
 <p class="muted">Nothing more is clicked while it is paused. Studio keeps what it is doing: a take that is already recording keeps recording.</p>
 <div class="row2"><button class="go" onclick="resumeRun()">&#9654; Continue</button><button class="stop" onclick="cancelRun()">&#9632; Cancel testing</button></div></div></div>
@@ -126,6 +136,7 @@ pre{font:12px/1.5 Menlo,monospace;background:#0f172a;color:#d6e0f5;padding:12px;
 <tr><td>Tick all usable / Untick all / Tick 5 random</td><td>Quick ways to choose sessions.</td></tr>
 <tr><td>Start</td><td>Starts the test.</td></tr>
 <tr><td>Pause / Esc held</td><td>Pauses the test. A window asks: <b>Continue</b> or <b>Cancel testing</b>.</td></tr>
+<tr><td>Quit Studio Tester (bottom right)</td><td>Closes the tester program and this page, after a warning. A running test is cancelled first. Your projects, settings and reports are kept. To use it again, double-click <b>Studio Tester.command</b>.</td></tr>
 <tr><td>Cancel testing</td><td>Stops the test at once and leaves Studio normal (no offline mode, no test faults, no camera label).</td></tr>
 <tr><td>Run again with the same seed</td><td>Repeats exactly the same random run, to show developers a failure.</td></tr>
 <tr><td>Open the report</td><td>A page with every step, the time and screenshots.</td></tr>
@@ -204,7 +215,11 @@ async function cancelRun(){await fetch('/api/cancel',{method:'POST'});$('pauseBo
 function again(){$('seed').value=lastSeed;start();}
 function openGuide(){$('guide').style.display='flex';document.body.style.overflow='hidden';}
 function closeGuide(){$('guide').style.display='none';document.body.style.overflow='';}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeGuide();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeGuide();quitCancel();}});
+function quitAsk(){$('quitBusy').style.display=window.running?'list-item':'none';$('quitBox').style.display='flex';}
+function quitCancel(){$('quitBox').style.display='none';}
+async function quitNow(){$('quitBox').style.display='none';try{await fetch('/api/quit',{method:'POST',body:'{}'});}catch(e){}
+ $('closedBox').style.display='flex';try{window.close();}catch(e){}}
 let APPS=[];
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
 async function appsList(){const r=await (await fetch('/api/apps')).json();APPS=r.running.concat(r.installed);appSel=r.selected_row;

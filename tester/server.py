@@ -193,9 +193,30 @@ def find_builds():
     return sorted(set(found), key=lambda path: os.path.getmtime(path), reverse=True)
 
 
+LOCAL_NAMES = ("localhost", "127.0.0.1")
+
+
+def request_allowed(host_header, origin_header):
+    """Only this Mac's own page may talk to the tester. A website open in the same browser could otherwise send requests to
+    localhost:8765 (start a test, quit the tester); a rebinding attack uses a foreign Host. Both are refused."""
+    def hostname(value):
+        value = (value or "").strip().lower()
+        if "://" in value:
+            value = value.split("://", 1)[1]
+        return value.split("/")[0].rsplit(":", 1)[0] if not value.startswith("[") else value
+    if hostname(host_header) not in LOCAL_NAMES:
+        return False
+    if origin_header and hostname(origin_header) not in LOCAL_NAMES:        # Origin is sent by browsers on cross-site requests
+        return False
+    return True
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *_):
         pass
+
+    def forbidden(self):
+        self.send("This request does not come from the Studio Tester page.", "text/plain", 403)
 
     def send(self, body, kind="application/json", code=200):
         data = body if isinstance(body, bytes) else body.encode()
@@ -206,6 +227,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self):
+        if not request_allowed(self.headers.get("Host"), self.headers.get("Origin")):
+            return self.forbidden()
         if self.path == "/":
             return self.send(PAGE, "text/html; charset=utf-8")
         if self.path == "/api/info":
@@ -241,6 +264,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send("not found", "text/plain", 404)
 
     def do_POST(self):
+        if not request_allowed(self.headers.get("Host"), self.headers.get("Origin")):
+            return self.forbidden()
         length = int(self.headers.get("Content-Length") or 0)
         body = json.loads(self.rfile.read(length) or b"{}")
         if self.path == "/api/start":
@@ -344,6 +369,10 @@ class Handler(BaseHTTPRequestHandler):
             if target:
                 subprocess.run(["/usr/bin/open", target])
             return self.send("{}")
+        if self.path == "/api/quit":
+            busy = bool(current["run"] and not current["run"].finished) or collect_job.running
+            threading.Thread(target=quit_sequence, daemon=True).start()
+            return self.send(json.dumps({"quitting": True, "was_busy": busy}))
         if self.path in ("/api/stop", "/api/cancel"):
             if current["run"]:
                 current["run"].stop_requested = True
@@ -449,6 +478,35 @@ def bind_or_reuse(preferred, make_server=None, probe=None, stopper=None, tries=1
     raise OSError(f"no free port between {preferred} and {preferred + tries - 1}")
 
 
+_running = {"server": None}      # the HTTP server of this program (set in main), so Quit can stop it
+
+
+def shutdown_process():
+    """Ends the tester program: the server loop is stopped (the program then ends by itself). A timer makes sure it really exits, even if
+    something keeps it alive. (A signal like Ctrl+C is not used: a program started in the background ignores it.)"""
+    threading.Timer(4.0, lambda: os._exit(0)).start()
+    server = _running["server"]
+    if server is not None:
+        server.shutdown()
+
+
+def quit_sequence(wait_seconds=20):
+    """Quit Studio Tester from the page: a running test or Collect is cancelled first (so Studio is left normal and the report is
+    made), then the program ends. Runs in its own thread, after the page got its answer."""
+    time.sleep(0.5)
+    collect_job.stop = True
+    run = current["run"]
+    if run and not run.finished:
+        run.stop_requested = True
+        control.cancel()
+        for _ in range(int(wait_seconds * 2)):
+            if run.finished:
+                break
+            time.sleep(0.5)
+    print("\nStudio Tester was closed from its page. You can close this Terminal window.\nTo use it again: double-click Studio Tester.command.", flush=True)
+    shutdown_process()
+
+
 def esc_pause(port):
     """Esc was held during a run: pause it, make a sound and bring the page to the front, where Continue / Cancel testing wait."""
     if control.pause("Esc held"):
@@ -475,6 +533,7 @@ def main():
     print(f"Studio Tester is running. The page: {url}\nKeep this window open while testing. Close it to stop.")
     threading.Timer(1.0, lambda: webbrowser.open(url)).start()
     control.start_esc_watcher(lambda: bool(current["run"] and not current["run"].finished), lambda: esc_pause(port))
+    _running["server"] = server
     try:
         server.serve_forever()
     except KeyboardInterrupt:
