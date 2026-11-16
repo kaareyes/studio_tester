@@ -32,12 +32,12 @@ class CollectJob:
         self.stop = False
         self.just_done = False
 
-    def start(self, build_path):
+    def start(self, build_path, limit=0):
         self.running, self.stop, self.just_done = True, False, False
         self.text = "Starting..."
-        threading.Thread(target=self._run, args=(build_path,), daemon=True).start()
+        threading.Thread(target=self._run, args=(build_path, limit), daemon=True).start()
 
-    def _run(self, build_path):
+    def _run(self, build_path, limit=0):
         try:
             run_dir = os.path.join(runner.REPORTS, datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S") + "_collect")
             os.makedirs(run_dir, exist_ok=True)
@@ -46,9 +46,10 @@ class CollectJob:
             if app.exists("login.signIn"):
                 self.text = "Studio is on the login screen. Sign in with the test account in Studio, then press Collect again."
                 return
-            data = collect.run(app, context.log, progress=lambda t: setattr(self, "text", t), stop=lambda: self.stop)
+            data = collect.run(app, context.log, progress=lambda t: setattr(self, "text", t), stop=lambda: self.stop, project_limit=limit)
             count = sum(len(p["sessions"]) for p in data["projects"])
-            self.text = f"Collected {len(data['projects'])} projects and {count} sessions." + ("" if data["complete"] else " The list is not complete (stopped or some sessions could not be read).")
+            scope = f"the first {limit} projects" if limit else "all projects"
+            self.text = f"Collected {len(data['projects'])} projects and {count} sessions ({scope})." + ("" if data["complete"] else " The list is not complete (stopped or some sessions could not be read).")
             self.just_done = True
         except Exception as error:
             self.text = f"Could not collect: {error}. Is Studio installed and open? Is the test account signed in?"
@@ -117,6 +118,7 @@ button.stop{background:#c0392b}button.small{padding:5px 10px;font-size:12px;marg
 <div id="gate" style="display:none">
 <section><h2>This Mac</h2><div id="setup"></div></section>
 <section><h2>2. Projects and sessions</h2>
+<select id="limit" style="width:auto;margin-right:6px"><option value="10">First 10 projects</option><option value="20">First 20 projects</option><option value="50">First 50 projects</option><option value="0">All projects (slow)</option></select>
 <button onclick="collect()" id="collectBtn" style="margin-top:0">Collect projects from the app</button> <button class="stop" onclick="collectStop()">Stop</button>
 <div><small id="collectState">Not collected yet. Studio must be open and signed in with the test account.</small></div>
 <input id="find" placeholder="Search (typos and capital letters are fine)" oninput="search()" style="margin-top:8px">
@@ -183,7 +185,7 @@ function selectAll(on){checked.clear();if(on)catalog.projects.forEach(p=>{if(p.i
 async function randomN(){const r=await (await fetch('/api/random',{method:'POST',body:JSON.stringify({count:5})})).json();checked.clear();r.ids.forEach(i=>checked.add(i));drawTree();}
 function updatePicked(){$('picked').textContent=checked.size+' session(s) ticked. '+(catalog.collected_at?'Collected '+catalog.collected_at.replace('T',' ')+(catalog.complete?'':' (not complete)'):'');estimate();}
 async function saveWords(){await fetch('/api/settings',{method:'POST',body:JSON.stringify({test_words:$('words').value.split(',').map(x=>x.trim()).filter(Boolean)})});await loadCatalog();}
-async function collect(){await fetch('/api/collect',{method:'POST',body:'{}'});}
+async function collect(){await fetch('/api/collect',{method:'POST',body:JSON.stringify({limit:$('limit').value})});}
 async function collectStop(){await fetch('/api/collect-stop',{method:'POST'});}
 function options(){return {picked:JSON.stringify([...checked]),allow_real:JSON.stringify([...allowReal]),auditions:$('auditions').value,rounds:$('rounds').value,hours:$('hours').value,profile:$('profile').value,mix:$('mix').value,mode:$('mode').value,seed:$('seed').value,presets:$('presetsList').value,sample_image:$('sampleImage').value,sample_video:$('sampleVideo').value,sessions:$('sessions').value,auditions_text:$('auditions_text').value};}
 async function estimate(){if(!info.suites)return;const r=await (await fetch('/api/estimate',{method:'POST',body:JSON.stringify({suite:$('suite').value,options:options()})})).json();
@@ -362,7 +364,11 @@ class Handler(BaseHTTPRequestHandler):
             build = chosen["path"]
             if not build:
                 return self.send(json.dumps({"error": "Choose a Studio app first (step 1)."}), code=400)
-            collect_job.start(build)
+            try:
+                limit = max(0, min(int(body.get("limit") or 0), 1000))
+            except (TypeError, ValueError):
+                limit = 0
+            collect_job.start(build, limit)
             return self.send("{}")
         if self.path == "/api/collect-stop":
             collect_job.stop = True

@@ -79,3 +79,18 @@ class Assign(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Limit(unittest.TestCase):
+    def test_stops_scrolling_only_when_the_next_project_is_seen(self):
+        three = {"a": {}, "b": {}, "c": {}}
+        self.assertFalse(collect.enough_projects(three, 3))            # the 3rd project's sessions may still continue below
+        self.assertTrue(collect.enough_projects({"a": {}, "b": {}, "c": {}, "d": {}}, 3))
+        self.assertFalse(collect.enough_projects(three, 0))            # 0 / None = all projects: never stop early
+        self.assertFalse(collect.enough_projects(three, None))
+
+    def test_keeps_the_first_projects_in_list_order(self):
+        seen = {"p1": 1, "p2": 2, "p3": 3, "p4": 4}
+        self.assertEqual(list(collect.first_projects(seen, 2)), ["p1", "p2"])
+        self.assertEqual(list(collect.first_projects(seen, 0)), ["p1", "p2", "p3", "p4"])
+        self.assertEqual(list(collect.first_projects(seen, 10)), ["p1", "p2", "p3", "p4"])

@@ -1,5 +1,5 @@
 {
- "version": "1.0.0",
- "notes": "First version: one-line install, choose the Studio app first, Collect and project picker, new suites, Update button",
+ "version": "1.0.1",
+ "notes": "Collect: choose first 10 / 20 / 50 / all projects (no more endless scrolling)",
  "min_build": ""
 }

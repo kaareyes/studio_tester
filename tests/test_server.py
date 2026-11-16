@@ -229,3 +229,10 @@ class Ports(unittest.TestCase):
         self.assertFalse(server.is_studio_tester(1, opener=lambda url, timeout: Page(b"<html>other</html>")))
         def down(url, timeout): raise OSError("refused")
         self.assertFalse(server.is_studio_tester(1, opener=down))
+
+
+class CollectLimit(unittest.TestCase):
+    def test_page_offers_the_project_choices_and_sends_the_limit(self):
+        for text in ("First 10 projects", "First 20 projects", "All projects (slow)", "limit:$('limit').value"):
+            self.assertIn(text, server.PAGE)
+        self.assertIn("fetch('/api/update/apply',{method:'POST',body:'{}'})", server.PAGE)      # the Update call is not touched by the limit

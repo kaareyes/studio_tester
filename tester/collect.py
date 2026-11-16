@@ -58,8 +58,22 @@ def read_talents(app):
     return [{"id": i, "name": n} for i, n in talents.items()]
 
 
-def run(app, log, progress=None, stop=lambda: False, read_sessions=True, max_scrolls=400):
-    """Returns the catalog dict (also saved). `progress(text)` is shown on the page."""
+def enough_projects(projects, limit):
+    """True once the list has scrolled far enough for `limit` projects: the NEXT project is on screen, so the last wanted project's
+    sessions are all seen (a project's sessions can continue after the project row first appears). limit 0/None = no limit."""
+    return bool(limit) and len(projects) > limit
+
+
+def first_projects(projects, limit):
+    """The first `limit` projects in the order they appear in the list (a dict keeps the order they were seen, top to bottom)."""
+    if not limit:
+        return dict(projects)
+    return dict(list(projects.items())[:limit])
+
+
+def run(app, log, progress=None, stop=lambda: False, read_sessions=True, max_scrolls=400, project_limit=None):
+    """Returns the catalog dict (also saved). `progress(text)` is shown on the page.
+    project_limit: read only the first N projects of the list (stops scrolling early); None or 0 = all projects."""
     progress = progress or (lambda text: None)
     projects = {}
     common.go_home(app)
@@ -71,15 +85,19 @@ def run(app, log, progress=None, stop=lambda: False, read_sessions=True, max_scr
         before = sum(len(p["sessions"]) for p in projects.values())
         _merge(projects, assign_sessions(_on_screen(app)))
         after = sum(len(p["sessions"]) for p in projects.values())
-        progress(f"Scanning the projects list: {len(projects)} projects, {after} sessions found")
+        progress(f"Scanning the projects list: {len(projects)} projects, {after} sessions found" + (f" (stops after {project_limit})" if project_limit else ""))
+        if enough_projects(projects, project_limit):
+            break                                   # the first N projects are fully seen: no more scrolling
         same = same + 1 if after == before else 0
         if same >= 6 and step > 2:                  # nothing new for six scrolls: the end of the list
             break
         common.scroll_page(app, 4, settle=0.7)
-    complete = same >= 6 and not stop()
+    reached_limit = enough_projects(projects, project_limit)
+    complete = (same >= 6 or reached_limit) and not stop()
+    projects = first_projects(projects, project_limit)
     log(f"list scanned: {len(projects)} projects, {sum(len(p['sessions']) for p in projects.values())} sessions")
 
-    data = {"complete": complete, "projects": []}
+    data = {"complete": complete, "projects": [], "project_limit": project_limit or 0}
     todo = [(pid, p, sid, name) for pid, p in projects.items() for sid, name in p["sessions"].items()]
     sessions_done = {}
     for number, (pid, project, sid, name) in enumerate(todo, 1):
