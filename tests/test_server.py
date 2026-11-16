@@ -151,3 +151,81 @@ class TargetPid(unittest.TestCase):
             self.assertEqual(ax.list_apps("x"), [(11, "/Applications/Studio (macOS).app"), (22, "/Applications/Studio (macOS) - Test.app")])
         finally:
             ax._studio_processes, ax.TARGET_PATH = original, old_target
+
+
+class Ports(unittest.TestCase):
+    def test_running_tester_is_replaced(self):
+        calls = {"n": 0}
+        def make(port):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise OSError("in use")                    # the old tester still holds the port
+            return "server"
+        kind, srv, port = server.bind_or_reuse(8765, make_server=make, probe=lambda p: True, stopper=lambda p: True)
+        self.assertEqual((kind, srv, port), ("replaced", "server", 8765))
+
+    def test_tester_with_a_test_running_is_left_alone(self):
+        def busy(port):
+            raise OSError("in use")
+        kind, srv, port = server.bind_or_reuse(8765, make_server=busy, probe=lambda p: True, stopper=lambda p: False)
+        self.assertEqual((kind, srv, port), ("existing", None, 8765))
+
+    def test_other_program_on_the_port_moves_to_the_next_one(self):
+        def make(port):
+            if port == 8765:
+                raise OSError("in use")
+            return "server-%d" % port
+        kind, srv, port = server.bind_or_reuse(8765, make_server=make, probe=lambda p: False, stopper=lambda p: self.fail("must not kill"))
+        self.assertEqual((kind, srv, port), ("new", "server-8766", 8766))
+
+    def test_no_free_port_is_a_clear_error(self):
+        def busy(port):
+            raise OSError("in use")
+        with self.assertRaises(OSError):
+            server.bind_or_reuse(8765, make_server=busy, probe=lambda p: False, tries=3)
+
+    def test_stopper_kills_only_an_idle_tester_process(self):
+        sent = []
+        state = {"alive": True}
+        def pids(port): return [101, 202] if state["alive"] else []
+        def kill(pid, sig): sent.append((pid, sig)); state["alive"] = False
+        ok = server.stop_running_tester(8765, pids=pids, is_tester=lambda p: p == 101, busy=lambda port: False, kill=kill, wait=lambda s: None)
+        self.assertTrue(ok)
+        self.assertEqual([p for p, _ in sent], [101])          # pid 202 is not a tester: never touched
+        sent.clear()
+        self.assertFalse(server.stop_running_tester(8765, pids=lambda p: [101], is_tester=lambda p: True, busy=lambda port: True, kill=kill, wait=lambda s: None))
+        self.assertEqual(sent, [])                              # a test is running in it: not killed
+        self.assertFalse(server.stop_running_tester(8765, pids=lambda p: [303], is_tester=lambda p: False, busy=lambda port: False, kill=kill, wait=lambda s: None))
+        self.assertEqual(sent, [])
+
+    def test_work_in_progress(self):
+        import json as j
+        class R:
+            def __init__(self, data): self.data = data
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+            def read(self): return j.dumps(self.data).encode()
+        def opener(state, collect):
+            def f(url, timeout):
+                if url.endswith("/api/state"): return R(state)
+                if collect is None: raise OSError("404")
+                return R(collect)
+            return f
+        self.assertTrue(server.work_in_progress(1, opener=opener({"suite": "x", "finished": None}, {"running": False})))
+        self.assertFalse(server.work_in_progress(1, opener=opener({"suite": "x", "finished": "t"}, {"running": False})))
+        self.assertFalse(server.work_in_progress(1, opener=opener({}, {"running": False})))
+        self.assertTrue(server.work_in_progress(1, opener=opener({}, {"running": True})))
+        self.assertFalse(server.work_in_progress(1, opener=opener({}, None)))               # older tester without Collect
+        def down(url, timeout): raise OSError("refused")
+        self.assertTrue(server.work_in_progress(1, opener=down))                            # unreadable: leave it alone
+
+    def test_identifies_a_studio_tester_page(self):
+        class Page:
+            def __init__(self, data): self.data = data
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+            def read(self, n): return self.data
+        self.assertTrue(server.is_studio_tester(1, opener=lambda url, timeout: Page(b"<title>Studio Tester</title>")))
+        self.assertFalse(server.is_studio_tester(1, opener=lambda url, timeout: Page(b"<html>other</html>")))
+        def down(url, timeout): raise OSError("refused")
+        self.assertFalse(server.is_studio_tester(1, opener=down))

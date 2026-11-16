@@ -4,9 +4,11 @@ import glob
 import json
 import os
 import random
+import signal
 import subprocess
 import sys
 import threading
+import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -414,10 +416,116 @@ class Handler(BaseHTTPRequestHandler):
         self.send("not found", "text/plain", 404)
 
 
+def is_studio_tester(port, opener=None):
+    """True when what answers on this port is a Studio Tester page (this or an older version)."""
+    import urllib.request
+    try:
+        with (opener or urllib.request.urlopen)(f"http://127.0.0.1:{port}/", timeout=3) as response:
+            return b"Studio Tester" in response.read(20000)
+    except Exception:
+        return False
+
+
+def listening_pids(port):
+    out = subprocess.run(["/usr/sbin/lsof", "-ti", f"tcp:{port}", "-sTCP:LISTEN"], capture_output=True, text=True).stdout.split()
+    return [int(p) for p in out if p.isdigit()]
+
+
+def is_tester_process(pid):
+    command = subprocess.run(["/bin/ps", "-o", "command=", "-p", str(pid)], capture_output=True, text=True).stdout
+    return "tester.server" in command or "tester/server.py" in command
+
+
+def work_in_progress(port, opener=None):
+    """True when the tester on this port is running a test or collecting (it must not be killed then), or cannot be read at all."""
+    import urllib.request
+    opener = opener or urllib.request.urlopen
+
+    def get(path):
+        with opener(f"http://127.0.0.1:{port}{path}", timeout=3) as response:
+            return json.loads(response.read() or b"{}")
+    try:
+        state = get("/api/state")
+    except Exception:
+        return True                       # cannot tell: leave it alone
+    try:
+        collecting = get("/api/collect-state").get("running")
+    except Exception:
+        collecting = False                # an older tester has no Collect
+    return bool(collecting or (state.get("suite") and not state.get("finished")))
+
+
+def stop_running_tester(port, pids=listening_pids, is_tester=is_tester_process, busy=work_in_progress, kill=os.kill, wait=time.sleep):
+    """Closes the Studio Tester that is already running on `port`, so this start replaces it. Returns True when it was closed,
+    False when it was left alone (a test is running in it, or it is not a tester process)."""
+    found = [p for p in pids(port) if is_tester(p)]
+    if not found or busy(port):
+        return False
+    for pid in found:
+        try:
+            kill(pid, signal.SIGTERM)
+        except OSError:
+            pass
+    for _ in range(10):
+        wait(0.5)
+        if not [p for p in pids(port) if is_tester(p)]:
+            break
+    else:
+        for pid in found:
+            try:
+                kill(pid, signal.SIGKILL)
+            except OSError:
+                pass
+        wait(1)
+    try:
+        from . import faults
+        faults.reset_all()               # the old tester may have left faults on (offline mode, camera label)
+    except Exception:
+        pass
+    return True
+
+
+def bind_or_reuse(preferred, make_server=None, probe=None, stopper=None, tries=10):
+    """Opens the page server. Returns ('new', server, port). When a Studio Tester already runs on the port it is closed and replaced
+    (('replaced' is reported by main through the stopper); if a test is running in it, it is left alone: ('existing', None, port).
+    When another program uses the port, the next free port is used."""
+    make_server = make_server or (lambda port: ThreadingHTTPServer(("127.0.0.1", port), Handler))
+    probe = probe or is_studio_tester
+    stopper = stopper or stop_running_tester
+    for port in range(preferred, preferred + tries):
+        try:
+            return "new", make_server(port), port
+        except OSError:
+            if not probe(port):
+                continue
+            if stopper(port):
+                for _ in range(10):
+                    try:
+                        return "replaced", make_server(port), port
+                    except OSError:
+                        time.sleep(0.5)
+            return "existing", None, port
+    raise OSError(f"no free port between {preferred} and {preferred + tries - 1}")
+
+
 def main():
-    server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
-    print(f"Studio Tester is running. The page: http://localhost:{PORT}\nKeep this window open while testing. Close it to stop.")
-    threading.Timer(1.0, lambda: webbrowser.open(f"http://localhost:{PORT}")).start()
+    try:
+        kind, server, port = bind_or_reuse(PORT)
+    except OSError as error:
+        print(f"Studio Tester could not start: {error}. Close other programs that use these ports, or restart the Mac.")
+        sys.exit(1)
+    url = f"http://localhost:{port}"
+    if kind == "existing":
+        print(f"Another Studio Tester is running a test right now, so I left it alone. Its page is open: {url}\n"
+              "To restart it: press Stop on that page (or wait until the test finishes), then open Studio Tester.command again.")
+        webbrowser.open(url)
+        return
+    if kind == "replaced":
+        print("A Studio Tester was already running. I closed it and started a fresh one.")
+    if port != PORT:
+        print(f"(Port {PORT} is used by another program, so the tester uses {port}.)")
+    print(f"Studio Tester is running. The page: {url}\nKeep this window open while testing. Close it to stop.")
+    threading.Timer(1.0, lambda: webbrowser.open(url)).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:

@@ -20,7 +20,7 @@ ROOT = runner.ROOT
 DEFAULT_REPO = "kaareyes/studio_tester"
 BRANCH = "release"                     # QA follows this branch; main is work in progress and never reaches them
 CODE_PATHS = ["tester", "suites", "tests", "docs", "NAMES.md", "README.md", "requirements.txt", "VERSION",
-              "Studio Tester.command", "Install Studio Tester.command", "Start Studio Tester.command"]
+              "Studio Tester.command", "Install Studio Tester.command", "Start Studio Tester.command", "install.sh"]
 KEEP = {"catalog.json", "settings.json", "reports", ".venv", ".update_backup", "release.json"}
 BACKUPS = os.path.join(ROOT, ".update_backup")
 TIMEOUT = 20
