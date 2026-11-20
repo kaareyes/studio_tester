@@ -73,6 +73,7 @@ Suites on the page: **Real audition day (the default template: normal audition, 
 - *Network faults*: 13 of 13. *Smoke*, *Explore*: pass.
 - *Recovery*: every scenario passes except **PT-10**, a real Studio problem (a restored take that uploads to 0% and never completes): evidence in the investigation report. Five scenarios are manual (PT-12, 14, 15, 17, RF-01).
 - *Chaos*, *Break it* / *Overnight* presets: see the changelog below; the presets stay switched off until Chaos is clean.
+- Switched off in the page and refused by the server until they are verified live (a developer can still start them through the API with `options.unverified = "yes"`): chaos, offline_load, long_video, soak, friday, network, recovery. Verified and on: Real audition day, Quick check, Normal (suites `day` and `realistic`), and the read-only suites smoke, checks, build_check, explore. The GraphQL schema drift check is skipped, with the reason, when the live backend answers 403 (set `SCHEMA_DRIFT_AUTH_TOKEN`).
 - Not yet run live: Offline load, Long video, Soak, Friday scope.
 
 ## What the tester does by itself (unattended runs)

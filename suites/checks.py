@@ -59,6 +59,13 @@ def schema_drift(context):
     """scripts/check_schema_drift.py: the vendored GraphQL schema against the live backend (removed fields are a crash risk)."""
     root = _need_repo()
     code, tail = _run(context, ["/usr/bin/python3", "scripts/check_schema_drift.py"], root, 300)
+    if code == 1 and "RESULT: FAIL" not in tail:
+        # exit 1 is also what Python returns for an uncaught error. The live endpoint refusing the introspection request (403/401, no auth
+        # token) is a check that could not run: shown as skipped with the reason, never a pass and never a "drift" finding.
+        if "HTTP 403" in tail or "HTTP 401" in tail or "403 Forbidden" in tail:
+            raise Skip("the schema drift check could not run: the live backend refused the introspection request (HTTP 403). Set "
+                       "SCHEMA_DRIFT_AUTH_TOKEN to run it. Nothing was compared: this is neither a pass nor a drift.")
+        raise AssertionError("the schema drift check could not run (the live backend could not be read): " + tail[-400:])
     if code == 1:
         raise AssertionError("the GraphQL schema drifted (a type or field was removed): " + tail[-400:])
     if code != 0:

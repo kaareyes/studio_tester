@@ -53,11 +53,19 @@ class Checks(unittest.TestCase):
         with mock.patch.object(checks, "repo_root", lambda: "/repo"):
             with mock.patch.object(checks, "_spawn", self.spawner(0, "no drift")):
                 checks.schema_drift(Context())                                   # passes
-            with mock.patch.object(checks, "_spawn", self.spawner(1, "REMOVED field Talent.stageName")):
+            with mock.patch.object(checks, "_spawn", self.spawner(1, "REMOVED field Talent.stageName\nRESULT: FAIL -- re-run codegen")):
                 with self.assertRaises(AssertionError) as raised:
                     checks.schema_drift(Context())
                 self.assertIn("drifted", str(raised.exception))
                 self.assertIn("REMOVED", str(raised.exception))                  # the reason is in the failure sentence
+            with mock.patch.object(checks, "_spawn", self.spawner(1, "RuntimeError: Introspection request failed: HTTP 403 Forbidden")):
+                with self.assertRaises(Skip) as skipped:
+                    checks.schema_drift(Context())                               # refused by the live backend: skipped with the reason, never "drift"
+                self.assertIn("403", str(skipped.exception))
+            with mock.patch.object(checks, "_spawn", self.spawner(1, "RuntimeError: connection reset")):
+                with self.assertRaises(AssertionError) as other:
+                    checks.schema_drift(Context())
+                self.assertNotIn("drifted", str(other.exception))               # an unreadable backend is not a drift finding
             with mock.patch.object(checks, "_spawn", self.spawner(2, "network error")):
                 with self.assertRaises(AssertionError):
                     checks.schema_drift(Context())                               # could not run: a failure, never a silent pass

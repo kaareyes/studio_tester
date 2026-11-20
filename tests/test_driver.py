@@ -1087,10 +1087,12 @@ class UnverifiedSuitesAreSwitchedOff(unittest.TestCase):
                 self.assertIsNone(server.suite_problem(suite, {"unverified": "yes"}))
             self.assertIsNone(server.suite_problem("day"))
             self.assertIsNone(server.suite_problem("realistic"))
+            for suite in ("smoke", "checks", "build_check", "explore"):            # the read-only suites were run live and stay on
+                self.assertIsNone(server.suite_problem(suite))
 
     def test_the_page_disables_them(self):
         from tester import page
-        self.assertIn("const NOT_READY=['chaos','offline_load','long_video','soak','friday']", page.PAGE)
+        self.assertIn("const NOT_READY=['chaos','offline_load','long_video','soak','friday','network','recovery']", page.PAGE)
         self.assertIn("disabled>", page.PAGE)
 
 

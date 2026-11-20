@@ -189,7 +189,7 @@ def support_problem(path):
 
 # Suites that have not been verified on the real app yet: switched off on the page and refused by the server, so a tester who is not
 # a developer cannot start something that may fail or hang. A developer can still run them through the API with options.unverified = "yes".
-NOT_VERIFIED_SUITES = ("chaos", "offline_load", "long_video", "soak", "friday")
+NOT_VERIFIED_SUITES = ("chaos", "offline_load", "long_video", "soak", "friday", "network", "recovery")
 
 
 def suite_problem(suite, options=None):

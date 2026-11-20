@@ -220,7 +220,7 @@ async function waitForRestart(){$('updText').textContent='Updated. Restarting th
  for(let i=0;i<120;i++){await new Promise(r=>setTimeout(r,2000));try{const r=await fetch('/api/update',{cache:'no-store'});if(r.ok&&i>=1){location.reload();return;}}catch(e){}}
  $('updText').textContent='The tester did not come back. Close this Terminal window and open Studio Tester.command again.';$('updBtn').disabled=false;}
 async function load(){checkUpdate();info=await (await fetch('/api/info')).json();
- const NOT_READY=['chaos','offline_load','long_video','soak','friday'];$('suite').innerHTML=Object.entries(info.suites).map(([k,v])=>NOT_READY.includes(k)?'<option value="'+k+'" disabled>'+v[0]+' (not verified yet: switched off)</option>':'<option value="'+k+'">'+v[0]+'</option>').join('');
+ const NOT_READY=['chaos','offline_load','long_video','soak','friday','network','recovery'];$('suite').innerHTML=Object.entries(info.suites).map(([k,v])=>NOT_READY.includes(k)?'<option value="'+k+'" disabled>'+v[0]+' (not verified yet: switched off)</option>':'<option value="'+k+'">'+v[0]+'</option>').join('');
  $('camera').innerHTML='<option value="">Built-in camera (default)</option>'+info.cameras.filter(c=>c.usable&&!c.built_in).map(c=>'<option>'+c.name+'</option>').join('');
  $('setup').innerHTML=info.setup.map(s=>'<div class="cc '+(s[0]?'ok':'fix')+'"><i>'+(s[0]?'&#10003;':'!')+'</i><span>'+esc(s[1])+' '+(s[0]?'':fixButton(s[1]))+'</span></div>').join('');
  $('words').value=(info.words_extra||[]).join(', ');$('protect').checked=!!info.protect_projects;preset('quick');await loadCatalog();}

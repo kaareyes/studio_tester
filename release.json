@@ -1,5 +1,5 @@
 {
- "version": "1.1.0",
- "notes": "Three presets verified live (Real audition day, Quick check, Normal). Waits that adapt while Studio is busy, live activity line and a coloured live log on a dark page, stops any recording left running before a run starts, waits for greyed-out controls, Esc pause self-check, unverified suites locked, name and time labels on recordings (Test build).",
+ "version": "1.1.1",
+ "notes": "Only verified templates are on: Real audition day, Quick check, Normal, plus the read-only checks (smoke, build_check, explore, checks). Network, Recovery, Chaos and the other unverified suites are switched off. The schema drift check is skipped with a reason when the backend answers 403 instead of reporting drift.",
  "min_build": ""
 }
