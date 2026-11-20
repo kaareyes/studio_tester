@@ -62,15 +62,29 @@ Raise `tester.runner.Skip("why")` when the test cannot run on this Mac. Any othe
 
 ## Status
 
-Suites on the page: **Build check**, **Smoke**, **Explore**, **Realistic**, **Chaos**, **Recovery**, **Network**, **Offline load**,
+Suites on the page: **Real audition day (the default template: normal audition, internet drops mid-take, long audition, offline audition that syncs, random extras)**, **Build check**, **Smoke**, **Explore**, **Realistic**, **Chaos**, **Recovery**, **Network**, **Offline load**,
 **Long video**, **Soak**, **Friday scope**, **Code checks** (developers).
 
 **Coverage:** [`COVERAGE.md`](COVERAGE.md) lists every test asset made for Studio (scripts, scenarios, fault presets, Swift test files) and where this tester covers it. The Studio rule: a new test is also put in the tester, and `python3 scripts/check_tester_coverage.py` (in the Studio repository) fails when one is missing. The unit tests of the tester itself: `.venv/bin/python -m unittest discover -s tests -t .`
-(43 tests: name matching, take lengths, data-integrity check, catalog, page server, driver steps).
+(225 unit tests: name matching, take lengths, data-integrity oracle, catalog, page server, driver steps, crash/stall handling, pop-ups.)
 
-**What has NOT been run against the real app yet:** the Collect step and the Realistic, Chaos, Recovery, Network, Offline load,
-Long video, Soak and Friday suites were written from the control names and the old position-based scripts and checked with fake-app
-unit tests only. Run each once on a test project and fix what the real screen does differently before trusting a result.
+**Live status (Nov 2026, Test build built from the branch):** run against the real app and fixed from what the screen really did.
+- *Real audition day* (default): passes (9 of 9 and 11 of 11 steps on the final build).
+- *Network faults*: 13 of 13. *Smoke*, *Explore*: pass.
+- *Recovery*: every scenario passes except **PT-10**, a real Studio problem (a restored take that uploads to 0% and never completes): evidence in the investigation report. Five scenarios are manual (PT-12, 14, 15, 17, RF-01).
+- *Chaos*, *Break it* / *Overnight* presets: see the changelog below; the presets stay switched off until Chaos is clean.
+- Not yet run live: Offline load, Long video, Soak, Friday scope.
+
+## What the tester does by itself (unattended runs)
+
+- **Crash:** Studio gone or crashed is seen within seconds; the step that was running and the crash report are saved, Studio is opened again, the macOS "quit unexpectedly" window is closed and the step is retried.
+- **Retries:** a screen step that fails (control not shown, click did nothing) is retried 3 times after the screen is made safe. A failed data check (lost, duplicated, misplaced media) is never retried.
+- **Stuck:** a heartbeat looks at the screen every minute (screenshots stay on this Mac, never in the shared zip); a step with no progress for 15 minutes is interrupted and retried; an upload that does not move for 5 minutes is reported as a finding, after one clean close-and-reopen of Studio to see whether it resumes.
+- **Uploads** are checked from the database AND from the app's Queue screen. The individual group takes of a merged (stitched) audition are left unsent by Studio on purpose and are not counted.
+- **Pop-ups and macOS sheets** are read and answered the safe way (buttons by their words; Proceed, never the X; "Stop & Save"); an unknown one is left alone and reported.
+- **Clicks** are made only when Studio is on top and the control is in view (the list is scrolled first); a moved mouse is put back.
+- **Esc** held 3 seconds pauses the run from any app (needs Input Monitoring permission, shown in the setup check).
+- Studio's console is saved per launch (`studio_console.log`, `studio_console_2.log`, ...) next to the run's `run.log`.
 
 ## Which Studio apps can be tested
 
@@ -83,7 +97,7 @@ The **Refresh** button in step 1 looks again right now: it forgets what it knew 
 1. **This Mac:** plain OK / FIX lines, with a button that opens the right System Settings page.
 2. **Projects and sessions:** press *Collect projects from the app*. The tester scrolls the projects list and opens each session
    (read only) and writes `catalog.json` (names only, not committed). Tick sessions; search forgives typos and capital letters.
-   Projects without a test word in the name (qa, test, sim, stress, demo... plus your own words) are greyed out and need *use anyway*.
+   Every project of the Test build can be used (it is the test environment). The optional switch *Protect real projects* (Advanced, off by default) greys out projects without a test word in the name (qa, test, sim, stress, demo... plus your own words), which then need *use anyway*.
 3. **How hard?** One of four presets (Quick, Normal, Break it, Overnight). *Advanced* has the suite, take length, mix, mode, counts,
    seed, network faults, offline-load media, camera and the test words. The page shows the estimated time and disk and blocks
    a run that does not fit on the disk or has no session ticked.

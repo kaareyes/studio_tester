@@ -1,5 +1,5 @@
 {
- "version": "1.0.9",
- "notes": "Not-supported Studio apps cannot be chosen or opened (click shows why); the page cannot show a version that is not the running code; Refresh button (searches the whole Mac); App version not supported check; guide updated",
+ "version": "1.1.0",
+ "notes": "Three presets verified live (Real audition day, Quick check, Normal). Waits that adapt while Studio is busy, live activity line and a coloured live log on a dark page, stops any recording left running before a run starts, waits for greyed-out controls, Esc pause self-check, unverified suites locked, name and time labels on recordings (Test build).",
  "min_build": ""
 }

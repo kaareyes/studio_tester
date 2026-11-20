@@ -56,7 +56,7 @@ def build(options):
         context.log("online again: waiting for the sync and uploads")
         end = time.time() + 7200
         while time.time() < end:
-            left = [m for m in oracle.media_since(state["pk"]) if not m["uploaded"] and not m["deleted"] and oracle.classify(m) != "talent_photo_cache"]
+            left = oracle.pending_since(state["pk"])
             if not left:
                 break
             time.sleep(30)

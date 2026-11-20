@@ -1,11 +1,12 @@
 """Test suites. Each suite is (title, description, tests); `tests` is a list of (test name, function(context)) or a function of the page
 options that builds that list. Add a suite here to show it on the page. `needs` says what the page must ask for."""
-from . import build_check, chaos, checks, explore, friday, long_video, network, offline_load, realistic, recovery, smoke, soak
+from . import build_check, chaos, checks, day, explore, friday, long_video, network, offline_load, realistic, recovery, smoke, soak
 
 SUITES = {
     "build_check": ("Build check (1 min)", "Starts the chosen Studio build and checks that it can be driven by name.", build_check.TESTS),
     "smoke": ("Smoke (2 min)", "Launch to session to upload Queue by control name, plus local database checks. No camera needed.", smoke.TESTS),
     "explore": ("Explore sessions and auditions (3-10 min)", "Scrolls the projects list, opens sessions, opens the Queue, scrolls to auditions and opens their file lists. No camera needed. The seed in the report repeats a run.", explore.build),
+    "day": ("A real audition day (default)", "One run that goes like a real casting day: a normal audition, the internet dropping in the middle of a take and coming back, a long audition, an audition with no internet that syncs when it is back, and a few random ones. Everything is checked at the end. The seed repeats a run.", day.build),
     "realistic": ("Realistic: like a casting user", "Random auditions in the sessions you tick: 1-3 talents, photos, slates, group image, 1-4 takes, Back, rating. After every audition the data is checked, and at the end every file must be uploaded.", realistic.build),
     "chaos": ("Chaos: tries to break it", "A careless user: flaky network during takes, button spam, add/remove talents, app killed mid-take, camera switched mid-take, half-built auditions. Crashes and hangs are saved as evidence and the run goes on. The seed repeats a run.", chaos.build),
     "recovery": ("Recovery: crashes at exact points", "Crashes the app right after Stop, after export, after the database save, and kills it during processing; checks the take comes back exactly once and uploads.", recovery.build),
@@ -17,4 +18,4 @@ SUITES = {
     "friday": ("Friday scope", "One test per row of the weekly stress scope; rows that cannot be automated yet say so.", friday.build),
 }
 # Suites that record video need a camera and the ticked sessions.
-RECORDING = {"realistic", "chaos", "recovery", "network", "offline_load", "long_video", "soak", "friday"}
+RECORDING = {"day", "realistic", "chaos", "recovery", "network", "offline_load", "long_video", "soak", "friday"}

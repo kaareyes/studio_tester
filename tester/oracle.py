@@ -48,8 +48,44 @@ def local_path(folder_path):
 
 
 def media_since(since_pk=0, path=None):
-    rows = query("select Z_PK, ZAUDITIOID, ZFOLDERPATH, ZISUPLOADED, ZISDELETED from ZDBMEDIA where Z_PK > ? order by Z_PK", (since_pk,), path)
-    return [{"pk": r[0], "audition": r[1], "folder": r[2] or "", "uploaded": bool(r[3]), "deleted": bool(r[4])} for r in rows]
+    rows = query("select Z_PK, ZAUDITIOID, ZFOLDERPATH, ZISUPLOADED, ZISDELETED, ZAUDITIONTYPE, ZGROUPTYPE, ZFILETYPE, ZNAMETAG "
+                 "from ZDBMEDIA where Z_PK > ? order by Z_PK", (since_pk,), path)
+    return [{"pk": r[0], "audition": r[1], "folder": r[2] or "", "uploaded": bool(r[3]), "deleted": bool(r[4]),
+             "audition_type": r[5] or "", "group_type": r[6] or "", "filetype": r[7] or "", "name_tag": r[8] or ""} for r in rows]
+
+
+def is_merged_group_scene(item):
+    """True for the individual take of a GROUP audition whose stitched merge video exists. Studio uploads only the merged video then and
+    leaves these scene clips with isUploaded=0 ON PURPOSE (found by reading the app: OfflineQueueRebuild.isIndividualGroupVideoScene,
+    and seen live: 'GroupMerge-<uuid>' folder next to the scenes). They are not waiting for anything."""
+    if not (item.get("audition_type") == "group" and item.get("group_type") == "audition" and item.get("filetype") == "video"):
+        return False
+    path = local_path(item.get("folder"))
+    marker = "/STUDIO APP/"
+    if marker not in path or not item.get("audition"):
+        return False
+    root, rest = path.split(marker, 1)
+    parts = rest.split("/")
+    if len(parts) < 3:
+        return False
+    session_dir = os.path.join(root + marker.rstrip("/"), parts[0], parts[1])
+    wanted = str(item["audition"]).lower()
+    try:
+        for name in os.listdir(session_dir):
+            if name.lower() == wanted and glob.glob(os.path.join(session_dir, name, "GroupMerge-*")):
+                return True
+    except OSError:
+        return False
+    return False
+
+
+def pending_since(since_pk=0, path=None):
+    """Clips that are really waiting to upload: not uploaded, not deleted, and belonging to an audition that HAS video (a take or a slate
+    clip). A group image alone is the placeholder Studio makes for the NEXT audition; it uploads when that audition is finalized, so it
+    must not hold up a wait or fail a check."""
+    items = [i for i in media_since(since_pk, path) if not i["deleted"] and classify(i) != "talent_photo_cache"]
+    with_video = {i["audition"] for i in items if classify(i) in ("take", "slate")}
+    return [i for i in items if not i["uploaded"] and i["audition"] in with_video and not is_merged_group_scene(i)]
 
 
 def classify(item):
@@ -95,8 +131,9 @@ def check(since_pk=0, expect=None, uploaded=None, path=None, check_files=True):
             problems.append(f"wrong session: audition {str(audition)[:8]} has files in {len(folders)} session folders: {sorted(folders)}")
         if not audition:
             problems.append(f"{len(files)} clip(s) have no audition at all (rows {[f['pk'] for f in files][:5]})")
-        if uploaded is True and any(not f["uploaded"] for f in files):
-            problems.append(f"not uploaded: {sum(1 for f in files if not f['uploaded'])} file(s) of audition {str(audition)[:8]} are still waiting after the Queue settled")
+        has_video = any(classify(f) in ("take", "slate") for f in files)
+        if uploaded is True and has_video and any(not f["uploaded"] and not is_merged_group_scene(f) for f in files):
+            problems.append(f"not uploaded: {sum(1 for f in files if not f['uploaded'] and not is_merged_group_scene(f))} file(s) of audition {str(audition)[:8]} are still waiting after the Queue settled")
         if uploaded is False and any(f["uploaded"] for f in files):
             problems.append(f"marked uploaded while offline: audition {str(audition)[:8]}")
         if check_files:

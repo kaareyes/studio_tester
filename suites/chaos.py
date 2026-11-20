@@ -53,7 +53,9 @@ def spam_buttons(context, app, rnd, options, extra):
             pass
         time.sleep(rnd.random() * 0.4)
         if app.exists("alert.dialog"):
-            app.press(rnd.choice(["alert.leftButton", "alert.rightButton"]), timeout=2) if app.exists("alert.leftButton") else None
+            cancel = driver.alert_button(app, driver.CANCEL_WORDS)          # a careless user still never confirms a pop-up (it could delete)
+            if cancel:
+                app.press(cancel, timeout=2)
     extra.append("spam")
 
 

@@ -15,6 +15,14 @@ HOLD_SECONDS = 3.0          # how long Esc must be held to pause (a tap or a sho
 ESC_KEYCODE = 53
 
 
+class UiStep(Exception):
+    """A screen step failed because of a flaky screen, a crash or a stuck step (not because of a data finding). Steps raising it are retried."""
+
+
+class StepInterrupted(UiStep):
+    """Raised inside the running step by the watchdog: Studio crashed, or the step made no progress for too long."""
+
+
 class StopRun(BaseException):
     """The person cancelled the run. A BaseException on purpose: the tests' own `except Exception` must not swallow it."""
 
@@ -22,7 +30,7 @@ class StopRun(BaseException):
 def begin(thread=None):
     """A run starts: the checkpoint applies to this thread only (server and monitor threads are never paused)."""
     with _cond:
-        _state.update(paused=False, cancel=False, thread=thread or threading.current_thread(), since=None, reason="")
+        _state.update(paused=False, cancel=False, thread=thread or threading.current_thread(), since=None, reason="", interrupt="")
     _time.sleep = _sleep_for_run
 
 
@@ -84,6 +92,16 @@ def checkpoint():
             _cond.wait(0.5)
         if _state["cancel"]:
             raise StopRun()
+        reason = _state.get("interrupt")
+        if reason:
+            _state["interrupt"] = ""                    # once: the retry that follows starts clean
+            raise StepInterrupted(reason)
+
+
+def interrupt(reason):
+    """The watchdog stops the step that is running right now (it raises StepInterrupted at its next click, wait or scroll)."""
+    with _cond:
+        _state["interrupt"] = reason
 
 
 def sleep(seconds):
@@ -128,10 +146,12 @@ class HoldTracker:
 
 
 def esc_pressed():
-    """True while the Esc key is physically held (the system's keyboard state; no special permission is needed to read it)."""
+    """True while the Esc key is physically held, whichever app is in front (the system's keyboard state; macOS needs the Input Monitoring
+    permission for the program to see keys typed into other apps: see keyboard_watch_allowed)."""
     try:
         import Quartz
-        return bool(Quartz.CGEventSourceKeyState(Quartz.kCGEventSourceStateCombinedSessionState, ESC_KEYCODE))
+        return bool(Quartz.CGEventSourceKeyState(Quartz.kCGEventSourceStateHIDSystemState, ESC_KEYCODE)
+                    or Quartz.CGEventSourceKeyState(Quartz.kCGEventSourceStateCombinedSessionState, ESC_KEYCODE))
     except Exception:
         return False
 
@@ -140,11 +160,83 @@ def watch_esc(is_running, on_hold, stop=lambda: False, pressed=esc_pressed, cloc
     """Background loop: while a test runs, holding Esc for HOLD_SECONDS calls on_hold()."""
     tracker = HoldTracker()
     while not stop():
-        if is_running() and tracker.update(pressed(), clock()):
-            on_hold()
-        elif not is_running():
-            tracker.update(False, clock())
+        try:
+            if is_running() and tracker.update(pressed(), clock()):
+                on_hold()
+            elif not is_running():
+                tracker.update(False, clock())
+        except Exception as error:               # one failure (a sound, the browser) must never end the watcher: Esc has to keep working
+            print(f"(Esc watcher: {type(error).__name__}: {error})")
         _real_sleep(interval)
+
+
+def esc_selfcheck(front_app="Finder", hold=HOLD_SECONDS + 0.6, wait=4.0, post=None, front=None, paused=None, resume_fn=None, sleep=None, clock=_time.time):
+    """Proves the Esc pause end to end, from inside a run: another app is brought to the front, Esc is held for a little over the hold time
+    with real keyboard events, and the run must pause by itself (the same path a person's held key takes). Then it continues.
+    Call it BETWEEN steps only (nothing is clicking then) and from the run thread: it waits with the real sleep, so the pause it causes
+    does not block it. Returns (ok, sentence). The key is always released."""
+    sleep = sleep or _real_sleep
+    paused = paused or is_paused
+    resume_fn = resume_fn or resume
+    front = front or (lambda name: _bring_to_front(name))
+    if post is None:
+        def post(down):
+            import Quartz
+            Quartz.CGEventPost(Quartz.kCGHIDEventTap, Quartz.CGEventCreateKeyboardEvent(None, ESC_KEYCODE, down))
+    if paused():
+        return False, "the run was already paused: the Esc self-check was skipped"
+    try:
+        front(front_app)
+        sleep(1.0)
+        began = clock()
+        post(True)
+        while clock() - began < hold:
+            sleep(0.4)
+            post(True)                                     # key repeat, like a held key
+    finally:
+        post(False)
+    end = clock() + wait
+    while clock() < end and not paused():
+        sleep(0.25)
+    ok = bool(paused())
+    if ok:
+        resume_fn()
+        return True, f"holding Esc for {hold:.1f} s with {front_app} in front paused the run by itself; it continues"
+    return False, (f"holding Esc for {hold:.1f} s with {front_app} in front did NOT pause the run: check System Settings > Privacy & Security > "
+                   "Input Monitoring for the program that runs the tester")
+
+
+def _bring_to_front(name):
+    import subprocess
+    subprocess.run(["/usr/bin/osascript", "-e", f'tell application "System Events" to set frontmost of first process whose name is "{name}" to true'],
+                   capture_output=True, timeout=15)
+
+
+def release_stuck_esc():
+    """A synthetic Esc that was pressed but never released (a program that was killed in the middle of a key press) keeps the system believing
+    Esc is held: every run would pause 3 seconds after it starts. A key-up for Esc is harmless when it is not held, so one is sent when the
+    tester starts. Returns True when Esc was down."""
+    try:
+        import Quartz
+        down = bool(Quartz.CGEventSourceKeyState(Quartz.kCGEventSourceStateHIDSystemState, ESC_KEYCODE))
+        if down:
+            Quartz.CGEventPost(Quartz.kCGHIDEventTap, Quartz.CGEventCreateKeyboardEvent(None, ESC_KEYCODE, False))
+        return down
+    except Exception:
+        return False
+
+
+def keyboard_watch_allowed():
+    """True when macOS lets this program read the keyboard state of OTHER apps (Input Monitoring). Without it the Esc key is not seen
+    while another app is in front. Asks once (the system shows its own question) when it is not allowed yet."""
+    try:
+        import Quartz
+        if Quartz.CGPreflightListenEventAccess():
+            return True
+        Quartz.CGRequestListenEventAccess()
+        return bool(Quartz.CGPreflightListenEventAccess())
+    except Exception:
+        return True
 
 
 def start_esc_watcher(is_running, on_hold):

@@ -9,7 +9,7 @@ import time
 
 from tester import faults, oracle
 from tester.runner import Skip
-from . import common, driver, recover
+from . import common, driver, realistic, recover
 from .common import plan_from_options
 from .realistic import _sessions
 
@@ -26,7 +26,20 @@ def _crash_scenario(preset, title, offline=False, long_take=False, kill_after=No
     def test(context, state):
         rnd = state["rnd"]
         project, entry = state["pairs"][0]
+        if state.get("ran_before"):
+            # Every scenario starts from a cleanly restarted Studio with an empty take journal. Found live: PT-10, PT-13 and PT-16 pass when
+            # run alone and failed in the full suite because the scenario before them left a resumed audition / pending takes behind.
+            context.log("starting this scenario from a cleanly restarted Studio")
+            recover.EXPECTED["gone"] = False
+            realistic.quit_studio(patience=15)
+            context.app = None
+        state["ran_before"] = True
+        state["last_failed"] = True                    # cleared again below when this scenario finishes without a problem
         app = recover.ensure_ready(context, (entry["id"], entry["name"]))
+        end_wait = time.time() + 90                    # the previous scenario's takes must all be restored before the next one begins
+        while time.time() < end_wait and [f for f in oracle.journal_files() if f != "broken.json"]:
+            realistic.answer_resume_if_open(context)
+            time.sleep(3)
         faults.reset_events()
         faults.label("PT-#", state["number"])
         faults.offline(offline)
@@ -43,9 +56,10 @@ def _crash_scenario(preset, title, offline=False, long_take=False, kill_after=No
                 driver.add_talents(app, rnd, 1, context.log)
                 driver.enter_audition_mode(app)
                 driver.record_take(app, 90 if long_take else 4, context.log)
-        except Exception:
+        except Exception as error:
             if not preset:
                 raise                                     # a crash is expected only with a crash preset
+            context.log(f"(the steps before the crash point stopped: {type(error).__name__}: {error})")   # was swallowed silently
         if kill_after is not None:
             time.sleep(kill_after)
             recover.kill_app()
@@ -71,6 +85,7 @@ def _crash_scenario(preset, title, offline=False, long_take=False, kill_after=No
             return [f for f in oracle.journal_files() if f != "broken.json"]
         end = time.time() + RESTORE_WAIT
         while time.time() < end and pending():
+            realistic.answer_resume_if_open(context)
             time.sleep(3)
         problems = [f"pending-take journal is not empty while idle: {pending()[:3]}"] if pending() else []
         faults.offline(False)
@@ -81,11 +96,12 @@ def _crash_scenario(preset, title, offline=False, long_take=False, kill_after=No
                 os.remove(broken)
         problems += oracle.check(pk, expect=expect, uploaded=None)
         if not offline:
-            end = time.time() + 900
-            while time.time() < end and any(not m["uploaded"] for m in oracle.media_since(pk) if oracle.classify(m) in ("take", "slate", "photo") and not m["deleted"]):
-                time.sleep(10)
+            note = realistic.wait_for_uploads(context, pk, limit=900)
+            if note:
+                problems.append(note)
             problems += oracle.check(pk, expect=expect, uploaded=True)
         state["number"] += 1
+        state["last_failed"] = bool(problems)
         if problems:
             raise AssertionError(f"{title}: " + "; ".join(problems))
     return test
@@ -100,11 +116,19 @@ def _delete_take_while_processing(context, app, rnd):
     driver.record_take(app, 60, context.log)
     deleters = app.find_all(prefix="capture.take.delete.")
     if not deleters:
+        # The delete control only shows after the card's options menu is opened (the three dots), like for a person.
+        menus = app.find_all(prefix="capture.take.options.")
+        if menus:
+            app.press(driver.name_of(menus[0]))
+            time.sleep(1)
+            deleters = app.find_all(prefix="capture.take.delete.")
+    if not deleters:
         raise AssertionError("no take to delete on the strip (the take card has no delete control)")
     app.press(driver.name_of(deleters[0]))
     time.sleep(1)
-    if app.exists("alert.rightButton"):
-        app.press("alert.rightButton")
+    confirm = driver.alert_button(app, ("yes", "delete", "confirm", "proceed", "ok"))     # this one is meant to confirm the take's deletion
+    if confirm:
+        app.press(confirm)
     recover.kill_app()
 
 
@@ -195,4 +219,7 @@ def build(options):
         tests.append((name, (lambda f: (lambda context: f(context, state)))(function)))
     for ident, title, reason in MANUAL:
         tests.append((f"{ident} {title}", (lambda r: (lambda context: (_ for _ in ()).throw(Skip(r))))(reason)))
+    only = [word.strip().upper() for word in str((options or {}).get("only") or "").split(",") if word.strip()]
+    if only:                                                  # e.g. "PT-01,PT-03": just those scenarios (quick diagnosis)
+        tests = [tests[0]] + [t for t in tests[1:] if any(t[0].upper().startswith(word) for word in only)]
     return tests

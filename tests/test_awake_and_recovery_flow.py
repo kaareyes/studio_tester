@@ -1,3 +1,5 @@
+import shutil
+import tempfile
 import json
 import os
 import subprocess
@@ -44,12 +46,15 @@ class Awake(unittest.TestCase):
 
 class RealisticAfterACrash(unittest.TestCase):
     def test_every_audition_starts_by_making_sure_studio_is_ready(self):
-        path = catalog.PATH
+        folder = tempfile.mkdtemp()                       # never the real catalog.json of the user
+        patcher = mock.patch.object(catalog, "PATH", os.path.join(folder, "catalog.json"))
+        patcher.start()
         catalog.save({"projects": [{"id": "p", "name": "QA", "sessions": [{"id": "s" * 32, "name": "S", "talents": [{"id": "t", "name": "A"}], "talents_read": True}]}]})
         try:
             tests = suites.SUITES["realistic"][2]({"picked": json.dumps(["s" * 32]), "auditions": "2"})
         finally:
-            os.remove(path)
+            patcher.stop()
+            shutil.rmtree(folder, ignore_errors=True)
         audition_tests = [f for n, f in tests if "audition" in n and "Wait" not in n]
         self.assertEqual(len(audition_tests), 2)
         seen = []
@@ -59,7 +64,7 @@ class RealisticAfterACrash(unittest.TestCase):
         with mock.patch.object(realistic.recover, "ensure_ready", lambda c, session=None: seen.append(session) or object()), \
              mock.patch.object(realistic.driver, "random_audition", lambda *a, **k: done), \
              mock.patch.object(realistic.faults, "offline", lambda on: None), mock.patch.object(realistic.oracle, "last_media_pk", lambda: 0), \
-             mock.patch.object(realistic.oracle, "check", lambda *a, **k: []), mock.patch("time.sleep", lambda s: None):
+             mock.patch.object(realistic.oracle, "check", lambda *a, **k: []), mock.patch.object(realistic, "verify_upload_started", lambda *a, **k: "ok"), mock.patch("time.sleep", lambda s: None):
             for function in audition_tests:
                 function(Context())
         self.assertEqual(len(seen), 2)                                          # once per audition, not only the first

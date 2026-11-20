@@ -33,11 +33,24 @@ def ax_name(element):
     return ax._attr(element, "AXIdentifier") or ""
 
 
+def session_with_talents():
+    """Name of a collected session that has scheduled talents (so the next test is meaningful); '' when none is known."""
+    try:
+        from tester import catalog
+        for project in catalog.load().get("projects", []):
+            for session in project.get("sessions", []):
+                if session.get("talents") and session.get("name"):
+                    return session["name"]
+    except Exception:
+        pass
+    return "November 04"
+
+
 def a_session_opens(context):
     app = common.app_of(context)
     # A session with scheduled talents makes the next test meaningful; STUDIO_TEST_SESSION picks another by its title. The page is
     # scrolled to find it (the list loads more pages as it goes); if it is not there the first listed session is opened.
-    wanted = os.environ.get("STUDIO_TEST_SESSION", "November 04")
+    wanted = os.environ.get("STUDIO_TEST_SESSION") or session_with_talents()
     try:
         session_id, title = common.open_session_by_title(app, wanted)
     except Skip:

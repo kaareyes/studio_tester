@@ -28,7 +28,10 @@ def make_copy(run_dir, dest_dir=None):
     path = os.path.join(dest_dir, name + ".zip")
     temporary = path + ".part"
     with zipfile.ZipFile(temporary, "w", zipfile.ZIP_DEFLATED) as archive:
-        for base, _, files in os.walk(run_dir):
+        for base, folders, files in os.walk(run_dir):
+            # The heartbeat screenshots show the WHOLE desktop (other apps, mail, chats): they stay on this Mac and are never in the zip
+            # that gets sent to somebody.
+            folders[:] = [f for f in folders if f != "heartbeat"]
             for file_name in files:
                 full = os.path.join(base, file_name)
                 archive.write(full, os.path.join(name, os.path.relpath(full, run_dir)))

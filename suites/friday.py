@@ -67,7 +67,7 @@ def row17_interrupted_upload(context, state):
         app = recover.ensure_ready(context, (entry["id"], entry["name"]))
         time.sleep(30)
         end = time.time() + 900
-        while time.time() < end and any(not m["uploaded"] for m in oracle.media_since(pk) if not m["deleted"] and oracle.classify(m) != "talent_photo_cache"):
+        while time.time() < end and oracle.pending_since(pk):
             time.sleep(10)
         problems = oracle.check(pk, uploaded=True)
         if problems:

@@ -124,9 +124,9 @@ class ChooseStudio(Base):
             self.assertIsNone(server.suite_problem("smoke"))
             self.assertIsNone(server.suite_problem("explore"))
             for suite in ("realistic", "chaos", "recovery", "network", "soak", "long_video", "offline_load", "friday"):
-                self.assertIn("Test build", server.suite_problem(suite))
+                self.assertIn("Test build", server.suite_problem(suite, {"unverified": "yes"}))
             server.chosen["path"] = "/Applications/Studio (macOS) - Test.app"
-            self.assertIsNone(server.suite_problem("chaos"))
+            self.assertIsNone(server.suite_problem("chaos", {"unverified": "yes"}))
         finally:
             server.chosen["path"] = None
 
@@ -486,3 +486,31 @@ class UnsupportedCannotBeChosen(Base):
     def test_page_greys_the_row_and_has_no_open_button_for_it(self):
         for text in (".app.unsup", "' unsup'", "Cannot be chosen. Click to see why.", "showUnsup(", "unsupNote"):
             self.assertIn(text, server.PAGE)
+
+
+class OvernightEstimate(Base):
+    def setUp(self):
+        server.chosen["path"] = "/Applications/Studio (macOS) - Test.app"
+        from unittest import mock
+        patcher = mock.patch.object(server, "support_problem", lambda path: None)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.addCleanup(lambda: server.chosen.__setitem__("path", None))
+
+    def hours(self, options):
+        text, problem, blocking = server.estimate_text("chaos", dict(options, picked='["a"]', unverified="yes"))
+        import re
+        return float(re.search(r"<b>(\d+) h (\d+) min</b>|<b>(\d+) min</b>", text).group(1) or 0) + (float(re.search(r"(\d+) h (\d+) min", text).group(2)) / 60 if "h" in text else 0)
+
+    def test_chaos_estimate_follows_the_chosen_take_length(self):
+        short = self.hours({"rounds": "60", "profile": "short"})
+        normal = self.hours({"rounds": "60", "profile": "normal"})
+        mixed = self.hours({"rounds": "60", "profile": "mixed"})
+        self.assertLess(short, normal)                      # the length of the takes counts (it used to be ignored)
+        self.assertLess(normal, mixed)
+        self.assertGreater(mixed, 8)                        # mixed includes 25-50 minute takes: not a one-night run
+
+    def test_the_overnight_preset_is_one_night(self):
+        self.assertIn("rounds:'60',profile:'normal'", server.PAGE)
+        self.assertIn("about 5 hours", server.PAGE)
+        self.assertLess(self.hours({"rounds": "60", "profile": "normal"}), 9)

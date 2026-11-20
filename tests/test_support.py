@@ -121,7 +121,7 @@ class SupportInTheServer(unittest.TestCase):
         server.chosen["path"] = old
         try:
             for suite in ("smoke", "explore", "realistic", "chaos"):
-                problem = server.suite_problem(suite)
+                problem = server.suite_problem(suite, {"unverified": "yes"})
                 self.assertIn("App version not supported for testing", problem)
                 self.assertIn(support.SUPPORTED_BRANCH, problem)
             self.assertIsNone(server.suite_problem("checks") if "Test.app" in old else None)         # the code checks do not need the app
@@ -142,7 +142,7 @@ class SupportInTheServer(unittest.TestCase):
         server.chosen["path"] = good
         try:
             self.assertIsNone(server.suite_problem("smoke"))
-            self.assertIsNone(server.suite_problem("chaos"))
+            self.assertIsNone(server.suite_problem("chaos", {"unverified": "yes"}))
         finally:
             server.chosen["path"] = None
 

@@ -16,7 +16,8 @@ def empty():
     return {"collected_at": None, "complete": False, "projects": []}
 
 
-def load(path=PATH):
+def load(path=None):
+    path = path or PATH                  # read at call time, so a test can point PATH at a temporary file
     try:
         with open(path) as handle:
             data = json.load(handle)
@@ -26,7 +27,8 @@ def load(path=PATH):
         return empty()
 
 
-def save(data, path=PATH):
+def save(data, path=None):
+    path = path or PATH
     data["collected_at"] = datetime.datetime.now().isoformat(timespec="seconds")
     temporary = path + ".tmp"
     with open(temporary, "w") as handle:
@@ -52,13 +54,21 @@ def test_words(path=SETTINGS):
     return sorted({matcher.normalize(w) for w in DEFAULT_TEST_WORDS + list(extra) if matcher.normalize(w)})
 
 
+def protect_enabled(path=None):
+    """The optional 'Protect real projects' switch (Advanced). Off by default: the Test build uses the test environment, so every project
+    in it is test data and can be used."""
+    return bool(load_settings(path or SETTINGS).get("protect_projects", False))
+
+
 def is_test_project(name, words=None):
     wanted = set(words if words is not None else test_words())
     return any(t in wanted for t in matcher.tokens(name))
 
 
 def decorate(data, words=None):
-    """The catalog for the page: every project gets `is_test` and `usable_sessions` (sessions with scheduled talents)."""
+    """The catalog for the page: every project gets `is_test` and `usable_sessions` (sessions with scheduled talents). Without the
+    'Protect real projects' switch every project counts as usable; with it (or when `words` is given) only projects with a test word."""
+    protect = words is not None or protect_enabled()
     words = words if words is not None else test_words()
     projects = []
     for project in data.get("projects", []):
@@ -66,8 +76,9 @@ def decorate(data, words=None):
         for session in project.get("sessions", []):
             talents = session.get("talents", [])
             sessions.append(dict(session, usable=bool(talents) or not session.get("talents_read", False)))
-        projects.append(dict(project, sessions=sessions, is_test=is_test_project(project.get("name", ""), words)))
-    return dict(data, projects=projects, test_words=words)
+        is_test = (not protect) or is_test_project(project.get("name", ""), words)
+        projects.append(dict(project, sessions=sessions, is_test=is_test))
+    return dict(data, projects=projects, test_words=words, protected=protect)
 
 
 def flatten(data):
@@ -80,13 +91,14 @@ def resolve_selection(data, selected_sessions, allow_real=()):
     A session of a non-test project is refused unless its project id is in `allow_real` (the extra confirm on the page)."""
     index = {s["id"]: (p, s) for p, s in flatten(data)}
     words = test_words()
+    protect = protect_enabled()
     pairs, problems = [], []
     for session_id in selected_sessions:
         if session_id not in index:
             problems.append(f"session {session_id} is not in the catalog any more (collect again)")
             continue
         project, session = index[session_id]
-        if not is_test_project(project["name"], words) and project["id"] not in set(allow_real):
+        if protect and not is_test_project(project["name"], words) and project["id"] not in set(allow_real):
             problems.append(f"'{project['name']}' is not a test project: not used (confirm it on the page to allow it)")
             continue
         pairs.append((project, session))
@@ -96,8 +108,9 @@ def resolve_selection(data, selected_sessions, allow_real=()):
 def pick_random(data, count, rnd, only_test=True):
     """`count` random usable sessions (as ids), for the 'random N sessions' button."""
     words = test_words()
+    protect = protect_enabled()
     pool = [s["id"] for p, s in flatten(data)
-            if (not only_test or is_test_project(p["name"], words)) and (s.get("talents") or not s.get("talents_read"))]
+            if (not (only_test and protect) or is_test_project(p["name"], words)) and (s.get("talents") or not s.get("talents_read"))]
     rnd.shuffle(pool)
     return pool[:count]
 

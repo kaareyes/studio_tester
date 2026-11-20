@@ -1,3 +1,4 @@
+import shutil
 import json
 import os
 import tempfile
@@ -111,12 +112,15 @@ class Checks(unittest.TestCase):
 
 class RecoveryList(unittest.TestCase):
     def test_every_scenario_of_scenarios_md_is_listed_by_name(self):
-        path = catalog.PATH
+        folder = tempfile.mkdtemp()                       # never the real catalog.json of the user
+        patcher = mock.patch.object(catalog, "PATH", os.path.join(folder, "catalog.json"))
+        patcher.start()
         catalog.save({"projects": [{"id": "p", "name": "QA", "sessions": [{"id": "s" * 32, "name": "S", "talents": [{"id": "t", "name": "A"}], "talents_read": True}]}]})
         try:
             names = " | ".join(n for n, _ in suites.SUITES["recovery"][2]({"picked": json.dumps(["s" * 32])}))
         finally:
-            os.remove(path)
+            patcher.stop()
+            shutil.rmtree(folder, ignore_errors=True)
         for ident in ("PT-01", "PT-02", "PT-03", "PT-04", "PT-05", "PT-06", "PT-07", "PT-08", "PT-09", "PT-10", "PT-11", "PT-12", "PT-13",
                       "PT-14", "PT-15", "PT-16", "PT-17", "RF-01"):
             self.assertIn(ident, names)                      # driven or listed as manual/planned: never silently missing

@@ -8,7 +8,7 @@ from tester import oracle
 def make_db(rows):
     path = os.path.join(tempfile.mkdtemp(), "StudioApp.sqlite")
     c = sqlite3.connect(path)
-    c.execute("create table ZDBMEDIA (Z_PK integer primary key, ZAUDITIOID text, ZFOLDERPATH text, ZISUPLOADED integer, ZISDELETED integer)")
+    c.execute("create table ZDBMEDIA (Z_PK integer primary key, ZAUDITIOID text, ZFOLDERPATH text, ZISUPLOADED integer, ZISDELETED integer, ZAUDITIONTYPE text, ZGROUPTYPE text, ZFILETYPE text, ZNAMETAG text)")
     for r in rows:
         c.execute("insert into ZDBMEDIA (ZAUDITIOID, ZFOLDERPATH, ZISUPLOADED, ZISDELETED) values (?,?,?,?)", r)
     c.commit(); c.close()

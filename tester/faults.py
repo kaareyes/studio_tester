@@ -11,6 +11,8 @@ EVENTS = os.path.expanduser("~/Library/Application Support/com.castingapp.studio
 
 
 def _run(*args, timeout=20):
+    if os.environ.get("STUDIO_TESTER_UNIT_TESTS") == "1":      # unit tests must never touch the real fault folder: a live run may be using it
+        return ""
     result = subprocess.run(["/bin/bash", SCRIPT] + [str(a) for a in args], capture_output=True, text=True, timeout=timeout)
     return (result.stdout + result.stderr).strip()
 
@@ -23,9 +25,23 @@ def is_offline():
     return "ON" in _run("offline")
 
 
+LAST_LABEL = {"text": ""}          # the label base the suite chose ('T-#', 'PT-#', ...): a photo or slate label returns to it afterwards
+
+
 def label(text="", start=None):
     """Burns a label into every camera frame. 'T-#' counts up by itself; no text removes it."""
+    LAST_LABEL["text"] = text or ""
     return _run("label", text, *([start] if (start is not None and text) else [])) if text else _run("label")
+
+
+def temporary_label(text):
+    """A label for ONE capture (e.g. 'P-# Mika Cole' on a talent photo). The counter keeps counting; `restore_label` goes back to the base."""
+    return _run("label", text) if text else None
+
+
+def restore_label():
+    base = LAST_LABEL["text"]
+    return _run("label", base) if base else None
 
 
 def camera(name=None):

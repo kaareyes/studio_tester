@@ -1,7 +1,7 @@
 """The test page (HTML, CSS and JavaScript in one string). Served by tester/server.py at http://localhost:8765."""
 
 PAGE = r"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Studio Tester</title><style>
-:root{--bg:#f3f5fa;--card:#fff;--ink:#17233c;--muted:#5d6b85;--line:#e1e7f1;--accent:#3b6fd8;--accent-d:#2c58b5;--green:#1f9d62;--green-bg:#e7f6ee;--red:#d6453d;--red-bg:#fdeceb;--orange:#e08a00;--orange-bg:#fff4e1;--blue-bg:#eaf1fe;--navy:#14213d}
+:root{color-scheme:dark;--bg:#11151f;--card:#1a2030;--ink:#e3e8f5;--muted:#9aa6c0;--line:#2b3348;--accent:#5b8cff;--accent-d:#4a76e0;--green:#2bb673;--green-bg:#12301f;--red:#f0605a;--red-bg:#3a1b1d;--orange:#e9a23a;--orange-bg:#3a2c12;--blue-bg:#18264a;--navy:#0c1220}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
 header.top{position:sticky;top:0;z-index:5;background:linear-gradient(90deg,#14213d,#1f3a6e);color:#fff;display:flex;align-items:center;gap:14px;padding:12px 28px;box-shadow:0 2px 10px rgba(20,33,61,.25)}
 .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#5b8cff,#8e6bff);display:grid;place-items:center;font-weight:800}
@@ -36,7 +36,7 @@ input[type=checkbox],input[type=radio]{width:auto;accent-color:var(--accent)}
 .proj{font-weight:700;margin-top:9px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.proj .tag{font-size:10px;font-weight:700;border-radius:5px;padding:1px 7px;color:#fff;background:var(--green)}.proj .tag.no{background:#9aa7bf}
 .sess{margin:2px 0 2px 16px;padding:3px 6px;border-radius:7px}.sess:hover{background:#eef3ff}.sess label{display:flex;gap:8px;align-items:center;cursor:pointer}.sess .t{margin-left:auto;font-size:11px;background:#e9eefb;color:#42537a;border-radius:10px;padding:0 8px}.grey{color:#9aa7bf}
 .presets{display:grid;grid-template-columns:1fr 1fr;gap:10px}.preset{border:1.5px solid var(--line);border-radius:13px;padding:12px 13px;cursor:pointer;background:#fff;transition:.12s}.preset:hover{border-color:#b8c6e6}.preset.on{border-color:var(--accent);background:var(--blue-bg);box-shadow:0 0 0 3px rgba(59,111,216,.12)}
-.preset .e{font-size:22px}.preset b{display:block;font-size:14px}.preset .tm{font-size:12px;color:var(--accent);font-weight:700}.preset p{margin:3px 0 0;font-size:12px;color:var(--muted)}
+.activity{margin-top:10px;padding:9px 12px;border-radius:10px;background:#eef3ff;border:1px solid #cfdcf7;font-size:13px;font-weight:600;color:#2a3f78}.loghead{margin-top:12px;font-weight:700;font-size:13px}#log .t{color:#6b7694}#log .bad{color:#ff8a8a;font-weight:700}#log .ok{color:#7ee0a1}#log .wait{color:#f2c46d}#log .rec{color:#7cc4ff}#log .note{color:#c4a6ff}#log .dim{color:#a3adc8}#log{height:260px;overflow:auto;background:#161b28;color:#cfd7ec;border-radius:10px;padding:10px 12px;font-size:11.5px;line-height:1.5;white-space:pre-wrap;margin:6px 0 0}.preset.off{opacity:.5;cursor:not-allowed;border-style:dashed;background:#f4f5f8}.preset.off:hover{border-color:var(--line)}.preset .off-note{display:block;margin-top:6px;font-size:11.5px;font-weight:700;color:#b45309}.preset .e{font-size:22px}.preset b{display:block;font-size:14px}.preset .tm{font-size:12px;color:var(--accent);font-weight:700}.preset p{margin:3px 0 0;font-size:12px;color:var(--muted)}
 .est{margin-top:12px;background:#f1f5ff;border:1px solid #d9e4fb;border-radius:11px;padding:9px 13px;font-size:13px}
 details{margin-top:12px}summary{cursor:pointer;font-weight:600;color:var(--accent)}.adv{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin-top:10px}.adv label{font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px}.adv .w{grid-column:1/-1}
 .startbar{position:sticky;bottom:0;background:rgba(243,245,250,.92);backdrop-filter:blur(6px);padding:12px 0 6px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}.warn{color:var(--red);font-size:13px;width:100%}
@@ -63,6 +63,23 @@ pre{font:12px/1.5 Menlo,monospace;background:#0f172a;color:#d6e0f5;padding:12px;
 .sup{font-size:11px;font-weight:700;border-radius:6px;padding:1px 8px;margin-left:4px}.sup.ok{background:var(--green-bg);color:#0f6b41}.sup.no{background:var(--red-bg);color:#8a1f19}.sup.wait{background:#eef2fa;color:#5d6b85}
 .stale{display:none;background:#fff4e5;border-bottom:2px solid #e08a00;color:#7a4a00;padding:10px 28px;font-weight:600}
 .empty{text-align:center;color:var(--muted);padding:26px 10px}.empty .e{font-size:40px}
+
+/* dark theme: the colours the rules above wrote directly */
+body{background:var(--bg);color:var(--ink)}
+button.ghost{background:#222a3d;color:#a9c0ff}button:disabled{background:#3a4358;color:#8e99b3}
+select,input,textarea{background:#141a28;border-color:#35405a;color:var(--ink)}
+.app:hover{background:#202845;border-color:#4a5b87}.app.unsup{background:#2d1d1f;border-color:#7a3a36}.app.unsup:hover{background:#38211f}
+.note.red,.fmsg,.cc.fix,.sup.no{color:#ffb4ae;border-color:#6b2f2c}.note.orange,.fmsg.sk,.banner,.stale{color:#f6cf8a;border-color:#6b5120}.stale{background:#3a2c12}
+.note.green,.cc.ok,.sup.ok{color:#8be3b4;border-color:#235a3c}.note.blue{color:#a9c0ff;border-color:#2c3f78}
+.step .dot,.step:not(:last-child):after{background:#2b3348;color:#8e99b3}.step.done .dot,.step.now .dot,.step.bad .dot{color:#fff}
+.bar{background:#2b3348}.tree{background:#141a28}.sess:hover{background:#202845}.sess .t{background:#27304a;color:#a9b6d8}
+.preset{background:#1a2030}.preset:hover{border-color:#5b8cff}.preset.off{background:#151a27}
+.activity{background:#18264a;border-color:#2c3f78;color:#b9ccff}.est{background:#18213a;border-color:#2c3a62}
+.badge,.sup.wait,.k{background:#27304a;color:#cfd8f0;border-color:#3a4566}.tile{background:#202741}.res,.gtable td{border-color:#2b3348}.pill.waiting{background:#4a546d}
+.gbox,.ghead,.pbox{background:#1a2030;color:var(--ink)}.quit{background:#1a2030;border-color:#7a3a36}.branch{background:#141a28;color:#e3e8f5;border-color:#7a3a36}
+#log{background:#0d111b}pre{background:#0d111b}.grey,.proj .tag.no{color:#8e99b3}.proj .tag.no{background:#4a546d;color:#fff}
+a{color:#8fb0ff}
+.startbar{background:#161b28!important;border-top:1px solid #2b3348!important}.warn{color:#f6cf8a}
 </style></head><body>
 <header class="top"><div class="logo">ST</div><h1>Studio Tester</h1><span class="chip" id="ver">version ...</span>
 <button class="small ghost" style="margin-left:14px;background:rgba(255,255,255,.14);color:#fff;border:0" onclick="openGuide()">&#10067; How to use</button>
@@ -98,7 +115,7 @@ pre{font:12px/1.5 Menlo,monospace;background:#0f172a;color:#d6e0f5;padding:12px;
 <div><label>Offline load: small photo</label><input id="sampleImage" placeholder="path"></div><div><label>Offline load: small video</label><input id="sampleVideo" placeholder="path"></div>
 <div class="w"><label>Explore: sessions by name (one per line)</label><textarea id="sessions" rows="2"></textarea></div>
 <div class="w"><label>Explore: auditions by name (one per line)</label><textarea id="auditions_text" rows="2"></textarea></div>
-<div class="w"><label>Test project words (a project with one of these words is a test project)</label><div class="row2"><input id="words" placeholder="qa, test, sim, stress (comma separated)" style="flex:1"><button class="small" onclick="saveWords()">Save words</button></div></div>
+<div class="w"><label><input type="checkbox" id="protect" onchange="saveWords()"> Protect real projects: only allow projects that have one of these words in their name (off by default: the Test build uses the test environment, so every project can be used)</label><div class="row2"><input id="words" placeholder="qa, test, sim, stress (comma separated)" style="flex:1"><button class="small" onclick="saveWords()">Save</button></div></div>
 </div></details></section>
 <div class="startbar"><div id="warn" class="warn"></div><button id="start" class="go" onclick="start()">&#9654; Start</button><button id="pauseBtn" class="ghost" style="display:none" onclick="pauseRun()">&#9208; Pause</button><button id="stopBtn" class="stop" onclick="stop()">&#9632; Stop</button><button id="again" class="ghost" onclick="again()" style="display:none">&#8635; Run again with the same seed</button></div>
 </div></div>
@@ -108,7 +125,8 @@ pre{font:12px/1.5 Menlo,monospace;background:#0f172a;color:#d6e0f5;padding:12px;
 <div class="bar" id="runBar" style="display:none"><span style="width:0"></span></div><div class="muted" id="runMeta" style="margin-top:6px"></div>
 <div class="tiles" id="tiles" style="display:none"></div>
 <div id="results"></div>
-<details id="logBox" style="display:none"><summary>Log</summary><pre id="log"></pre></details>
+<div id="activity" class="activity" style="display:none"></div>
+<div id="logBox" style="display:none"><div class="loghead">Live log <span class="muted">(what the script is doing, newest at the bottom)</span></div><pre id="log"></pre></div>
 <div class="row2" style="margin-top:14px" id="report"></div>
 <div class="row2" style="margin-top:10px"><button class="small ghost" onclick="openReports()">Open the reports folder</button></div></section>
 </div></main>
@@ -130,7 +148,7 @@ pre{font:12px/1.5 Menlo,monospace;background:#0f172a;color:#d6e0f5;padding:12px;
 <div class="gstep"><div class="no">1</div><div><b>Choose the Studio app</b>Click <b>Studio (macOS) - Test</b> in the list. Nothing else shows until you choose one. If it is not in the list, press <b>Refresh</b> (it also searches other folders), or press <b>Open it</b> next to it.</div></div>
 <div class="gstep"><div class="no">2</div><div><b>Sign in to Studio</b>If this page says <b>"You need to log in first"</b>, go to the Studio window and sign in with the <b>test account</b>. Press <b>Show the Studio window</b> if you cannot find it. This page continues <b>by itself</b> as soon as you are signed in. The tester never types your password.</div></div>
 <div class="gstep"><div class="no">3</div><div><b>Collect the projects</b>Choose <b>First 10 projects</b> (fast) and press <b>Collect projects from the app</b>. The tester reads the projects and sessions. It only looks: it records nothing and changes nothing. Wait until it says <i>Collected ...</i></div></div>
-<div class="gstep"><div class="no">4</div><div><b>Tick the sessions to test</b>Tick one or many sessions. Use the search box if the list is long (typing mistakes are fine). Grey projects are protected (not test projects): leave them alone.</div></div>
+<div class="gstep"><div class="no">4</div><div><b>Tick the sessions to test</b>Tick one or many sessions. Use the search box if the list is long (typing mistakes are fine). Every project of the Test app can be used. (In Advanced you can switch on <b>Protect real projects</b>: then projects without a test word are greyed out.)</div></div>
 <div class="gstep"><div class="no">5</div><div><b>Choose how hard</b>Pick a card: <b>Quick check</b> (about 15 min) is the best first try. <b>Break it</b> tries to crash Studio. <b>Overnight</b> runs for hours.</div></div>
 <div class="gstep"><div class="no">6</div><div><b>Press Start</b>Then <b>do not touch the mouse or keyboard</b>: the tester clicks for you. You can watch the progress bar and the list of steps. Press <b>Stop</b> to end it safely at any time.</div></div>
 <div class="gstep"><div class="no">7</div><div><b>Read the result</b>A big <b>PASS</b> (green) or <b>FAIL</b> (red) shows. Each failed step has a short sentence that says what went wrong, with a screenshot link. To send the result, press <b>Show the zip to share</b>: it is one file with the whole report.</div></div>
@@ -170,18 +188,19 @@ You can put the settings back after the test.</div>
 <tr><td>"This test records auditions and needs the Test build"</td><td>You chose Develop, Staging or Production. Choose <b>Studio (macOS) - Test</b>.</td></tr>
 <tr><td>The page does not open</td><td>Go to <span class="k">http://localhost:8765</span> in your browser and keep the Terminal window open.</td></tr>
 <tr><td>Anything else</td><td>Send a screenshot of this page and of the Terminal window to the developers.</td></tr></table>
-<p class="muted" style="margin-top:16px">Rules: test account and test projects only, never real auditions or customers. Do not share reports outside the team (they contain project names).</p>
+<p class="muted" style="margin-top:16px">Rules: use the Test app (test environment) and the test account; never record in the Production app or with real customer data. Do not share reports outside the team (they contain project names).</p>
 </div></div></div>
 <script>
 const PAGE_VERSION='__PAGE_VERSION__';
-let info={},catalog={projects:[]},checked=new Set(),allowReal=new Set(),lastSeed='',active='quick',loginSt={state:'none'},appSel=null;
+let info={},catalog={projects:[]},checked=new Set(),allowReal=new Set(),lastSeed='',active='day',loginSt={state:'none'},appSel=null;
 const $=id=>document.getElementById(id);
-const PRESETS={quick:['&#9889;','Quick check','about 15 min','Two short auditions in each ticked session.',{suite:'realistic',auditions:'2',profile:'short',mode:'online'}],
- normal:['&#9881;&#65039;','Normal','about 1 hour','Six auditions per session, mixed take lengths.',{suite:'realistic',auditions:'6',profile:'mixed',mode:'online'}],
- chaos:['&#128165;','Break it','about 1 hour','Random sabotage: bad network, button spam, app killed. Crashes are saved as evidence.',{suite:'chaos',rounds:'25',profile:'short'}],
- overnight:['&#127769;','Overnight','hours','Chaos for hours, all take lengths.',{suite:'chaos',rounds:'120',profile:'mixed'}]};
-function drawPresets(){$('presets').innerHTML=Object.entries(PRESETS).map(([k,v])=>'<div class="preset'+(k==active?' on':'')+'" onclick="preset(\''+k+'\')"><span class="e">'+v[0]+'</span><b>'+v[1]+'</b><span class="tm">'+v[2]+'</span><p>'+v[3]+'</p></div>').join('');}
-function preset(k){active=k;const v=PRESETS[k][4];$('suite').value=v.suite;$('auditions').value=v.auditions||'';$('rounds').value=v.rounds||'';$('profile').value=v.profile||'mixed';$('mode').value=v.mode||'online';drawPresets();suiteChanged();}
+const PRESETS={day:['&#127916;','Real audition day (default)','about 45 min','Like a real casting day: a normal audition, the internet dropping in the middle of a take and coming back, a long audition, one with no internet that syncs later, and a few random ones. Everything is checked at the end.',{suite:'day',auditions:'',profile:'mixed',mode:'online'}],
+ quick:['&#9889;','Quick check','about 15 min','Two short auditions in each ticked session.',{suite:'realistic',auditions:'2',profile:'short',mode:'online'}],
+ normal:['&#9881;&#65039;','Normal','about 1 hour','Six auditions per session, mixed take lengths.',{suite:'realistic',auditions:'6',profile:'mixed',mix:'60/40/0',mode:'online'}],
+ chaos:['&#128165;','Break it','about 1 hour','Random sabotage: bad network, button spam, app killed. Crashes are saved as evidence.',{suite:'chaos',rounds:'25',profile:'short'},'Not ready yet: this one is being fixed and is switched off for now.'],
+ overnight:['&#127769;','Overnight','about 5 hours','Chaos for a night: 60 random scenarios with 1 to 5 minute takes.',{suite:'chaos',rounds:'60',profile:'normal'},'Not ready yet: this one is being fixed and is switched off for now.']};
+function drawPresets(){$('presets').innerHTML=Object.entries(PRESETS).map(([k,v])=>v[5]?'<div class="preset off" title="'+v[5]+'"><span class="e">'+v[0]+'</span><b>'+v[1]+'</b><span class="tm">'+v[2]+'</span><p>'+v[3]+'</p><span class="off-note">'+v[5]+'</span></div>':'<div class="preset'+(k==active?' on':'')+'" onclick="preset(\''+k+'\')"><span class="e">'+v[0]+'</span><b>'+v[1]+'</b><span class="tm">'+v[2]+'</span><p>'+v[3]+'</p></div>').join('');}
+function preset(k){if(PRESETS[k][5])return;active=k;const v=PRESETS[k][4];$('suite').value=v.suite;$('auditions').value=v.auditions||'';$('rounds').value=v.rounds||'';$('profile').value=v.profile||'mixed';$('mode').value=v.mode||'online';if($('mix'))$('mix').value=v.mix||'';drawPresets();suiteChanged();}
 function suiteChanged(){$('suiteText').textContent=info.suites&&info.suites[$('suite').value]?info.suites[$('suite').value][1]:'';estimate();}
 let updInfo=null;
 function staleNote(u){const sb=$('staleBar');let msg='';
@@ -201,24 +220,24 @@ async function waitForRestart(){$('updText').textContent='Updated. Restarting th
  for(let i=0;i<120;i++){await new Promise(r=>setTimeout(r,2000));try{const r=await fetch('/api/update',{cache:'no-store'});if(r.ok&&i>=1){location.reload();return;}}catch(e){}}
  $('updText').textContent='The tester did not come back. Close this Terminal window and open Studio Tester.command again.';$('updBtn').disabled=false;}
 async function load(){checkUpdate();info=await (await fetch('/api/info')).json();
- $('suite').innerHTML=Object.entries(info.suites).map(([k,v])=>'<option value="'+k+'">'+v[0]+'</option>').join('');
+ const NOT_READY=['chaos','offline_load','long_video','soak','friday'];$('suite').innerHTML=Object.entries(info.suites).map(([k,v])=>NOT_READY.includes(k)?'<option value="'+k+'" disabled>'+v[0]+' (not verified yet: switched off)</option>':'<option value="'+k+'">'+v[0]+'</option>').join('');
  $('camera').innerHTML='<option value="">Built-in camera (default)</option>'+info.cameras.filter(c=>c.usable&&!c.built_in).map(c=>'<option>'+c.name+'</option>').join('');
  $('setup').innerHTML=info.setup.map(s=>'<div class="cc '+(s[0]?'ok':'fix')+'"><i>'+(s[0]?'&#10003;':'!')+'</i><span>'+esc(s[1])+' '+(s[0]?'':fixButton(s[1]))+'</span></div>').join('');
- $('words').value=(info.words_extra||[]).join(', ');preset('quick');await loadCatalog();}
+ $('words').value=(info.words_extra||[]).join(', ');$('protect').checked=!!info.protect_projects;preset('quick');await loadCatalog();}
 function fixButton(t){if(/Accessibility/.test(t))return '<button class="small" onclick="fix(\'accessibility\')">Open the setting</button>';if(/camera/i.test(t))return '<button class="small" onclick="fix(\'camera\')">Open the setting</button>';return '';}
 async function fix(w){await fetch('/api/fix',{method:'POST',body:JSON.stringify({what:w})});}
 async function loadCatalog(){catalog=await (await fetch('/api/catalog')).json();drawTree();}
 let found=null;async function search(){const q=$('find').value.trim();if(!q){found=null;drawTree();return;}const r=await (await fetch('/api/search',{method:'POST',body:JSON.stringify({q})})).json();found=new Set(r.ids);drawTree();}
 function drawTree(){const q=$('find').value.trim().toLowerCase();const t=$('tree');if(!catalog.projects.length){t.innerHTML='<small>Nothing collected yet.</small>';updatePicked();return;}
  t.innerHTML=catalog.projects.map(p=>{const ss=p.sessions.filter(s=>!q||(found?found.has(s.id):(p.name+' '+s.name).toLowerCase().includes(q)));if(!ss.length)return '';
- const lock=!p.is_test;return '<div class="proj '+(lock?'grey':'')+'">'+esc(p.name)+' <span class="tag '+(lock?'no':'')+'">'+(lock?'not a test project':'test project')+'</span>'+(lock?'<label style="font-weight:400;font-size:12px"><input type="checkbox" '+(allowReal.has(p.id)?'checked':'')+' onchange="allow(\''+p.id+'\',this.checked)"> use anyway</label>':'')+'</div>'+
+ const lock=!p.is_test;return '<div class="proj '+(lock?'grey':'')+'">'+esc(p.name)+(catalog.protected?' <span class="tag '+(lock?'no':'')+'">'+(lock?'not a test project':'test project')+'</span>':'')+(lock?'<label style="font-weight:400;font-size:12px"><input type="checkbox" '+(allowReal.has(p.id)?'checked':'')+' onchange="allow(\''+p.id+'\',this.checked)"> use anyway</label>':'')+'</div>'+
  ss.map(s=>{const dis=(!s.usable)||(lock&&!allowReal.has(p.id));return '<div class="sess '+(dis?'grey':'')+'"><label><input type="checkbox" '+(dis?'disabled ':'')+(checked.has(s.id)?'checked ':'')+'onchange="tick(\''+s.id+'\',this.checked)"> '+esc(s.name)+' <span class="t">'+(s.usable?(s.talents.length+(s.talents.length==1?' talent':' talents')):'no talents scheduled')+'</span></label></div>'}).join('')}).join('');updatePicked();}
 function tick(id,on){on?checked.add(id):checked.delete(id);updatePicked();}
 function allow(id,on){on?allowReal.add(id):allowReal.delete(id);if(!on)catalog.projects.filter(p=>p.id==id).forEach(p=>p.sessions.forEach(s=>checked.delete(s.id)));drawTree();}
 function selectAll(on){checked.clear();if(on)catalog.projects.forEach(p=>{if(p.is_test||allowReal.has(p.id))p.sessions.forEach(s=>{if(s.usable)checked.add(s.id)})});drawTree();}
 async function randomN(){const r=await (await fetch('/api/random',{method:'POST',body:JSON.stringify({count:5})})).json();checked.clear();r.ids.forEach(i=>checked.add(i));drawTree();}
 function updatePicked(){$('picked').textContent=checked.size+' session(s) ticked. '+(catalog.collected_at?'Collected '+catalog.collected_at.replace('T',' ')+(catalog.complete?'':' (not complete)'):'');estimate();drawSteps();}
-async function saveWords(){await fetch('/api/settings',{method:'POST',body:JSON.stringify({test_words:$('words').value.split(',').map(x=>x.trim()).filter(Boolean)})});await loadCatalog();}
+async function saveWords(){await fetch('/api/settings',{method:'POST',body:JSON.stringify({test_words:$('words').value.split(',').map(x=>x.trim()).filter(Boolean),protect_projects:$('protect').checked})});await loadCatalog();}
 async function collect(){await fetch('/api/collect',{method:'POST',body:JSON.stringify({limit:$('limit').value})});}
 async function collectStop(){await fetch('/api/collect-stop',{method:'POST'});}
 function options(){return {picked:JSON.stringify([...checked]),allow_real:JSON.stringify([...allowReal]),auditions:$('auditions').value,rounds:$('rounds').value,hours:$('hours').value,profile:$('profile').value,mix:$('mix').value,mode:$('mode').value,seed:$('seed').value,presets:$('presetsList').value,sample_image:$('sampleImage').value,sample_video:$('sampleVideo').value,sessions:$('sessions').value,auditions_text:$('auditions_text').value};}
@@ -244,6 +263,9 @@ function supBadge(x){x=x||{};if(x.state==='ok')return '<span class="sup ok" titl
 let unsupNote=null;
 function showUnsup(i){unsupNote=APPS[i];applyGate();}
 let APPS=[];
+function colorLine(line){var m=/^(\d\d:\d\d:\d\d)(\.\d+)?\s(.*)$/.exec(line),t='',b=line;if(m){t='<span class="t">'+m[1]+'</span> ';b=m[3]}
+var c='';if(/FAIL|INCIDENT|ERROR|Error|did not|could not|crash|stuck|made no progress|\bfailed\b/i.test(b))c='bad';else if(/passed|all clean|ready to share|recorded:|upload check|talents added|finalize|Resume|stopped/i.test(b)&&!/waiting/i.test(b))c='ok';else if(/waiting|HEARTBEAT|^\.\.\./.test(b))c='wait';else if(/record|slate|photo|take|Queue|upload/i.test(b))c='rec';else if(/ESC|pause|keeping the Mac|suite |seed|build/i.test(b))c='note';
+return t+(c?'<span class="'+c+'">'+esc(b)+'</span>':esc(b))}
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
 async function appsList(){const r=await (await fetch('/api/apps')).json();APPS=r.running.concat(r.installed);appSel=r.selected_row;
  $('checkedAt').textContent='Last checked '+(r.checked_at||'')+(r.searched_at?' - searched the whole Mac at '+r.searched_at:'');
@@ -304,7 +326,7 @@ async function tick2(){appsList();
  $('tiles').style.display='grid';$('tiles').innerHTML='<div class="tile p"><b>'+s.counts.passed+'</b><span>Passed</span></div><div class="tile f"><b>'+s.counts.failed+'</b><span>Failed</span></div><div class="tile s"><b>'+s.counts.skipped+'</b><span>Skipped</span></div><div class="tile"><b>'+(s.counts.waiting+s.counts.running)+'</b><span>To go</span></div>';
  $('results').innerHTML=s.results.map(r=>{const links=(r.files||[]).map(f=>'<a href="/reports/'+s.folder+'/'+f+'" target="_blank">'+esc(f.replace(/^fail_\d+_/,''))+'</a>').join('');
   return '<div class="res"><span class="pill '+r.status+'">'+r.status.toUpperCase()+'</span><div class="nm">'+esc(r.name)+(r.message?'<div class="fmsg '+(r.status=='skipped'?'sk':'')+'">'+esc(r.message)+(links?'<div style="margin-top:4px">'+links+'</div>':'')+'</div>':'')+'</div><span class="tm">'+(r.seconds?dur(r.seconds):'')+'</span></div>';}).join('');
- $('logBox').style.display='block';$('log').textContent=s.log.join('\n');const seedLine=s.log.find(l=>/seed \d+/.test(l));if(seedLine)lastSeed=(seedLine.match(/seed (\d+)/)||[])[1]||lastSeed;
+ $('logBox').style.display='block';const logEl=$('log'),atEnd=logEl.scrollTop+logEl.clientHeight>=logEl.scrollHeight-30;logEl.innerHTML=s.log.map(colorLine).join('\n');if(atEnd)logEl.scrollTop=logEl.scrollHeight;const doing=s.activity&&s.activity.text&&running?s.activity:null;$('activity').style.display=doing?'block':'none';if(doing)$('activity').innerHTML='&#9203; '+esc(doing.text)+' <span class="muted">&mdash; '+dur(doing.seconds)+'</span>';const seedLine=s.log.find(l=>/seed \d+/.test(l));if(seedLine)lastSeed=(seedLine.match(/seed (\d+)/)||[])[1]||lastSeed;
  $('report').innerHTML=s.finished?'<a href="/reports/'+s.folder+'/report.html" target="_blank" style="text-decoration:none"><button class="small">Open the report</button></a><button class="small" onclick="revealReport(\''+s.folder+'\')">'+(s.shared_zip?'Show the zip to share':'Show the report folder')+'</button><button class="small ghost" onclick="copyReport(\''+s.folder+'\')">Copy report text</button>':'';
  $('again').style.display=(s.finished&&lastSeed)?'inline-block':'none';$('start').disabled=running;drawSteps();}
 async function revealReport(f){await fetch('/api/reveal-report',{method:'POST',body:JSON.stringify({folder:f})});}

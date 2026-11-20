@@ -2,6 +2,7 @@ import os
 import random
 import tempfile
 import unittest
+from unittest import mock
 from tester import catalog, collect
 
 PID = "11111111-1111-1111-1111-111111111111"
@@ -30,18 +31,33 @@ class Catalog(unittest.TestCase):
         self.assertTrue(d["projects"][0]["sessions"][0]["usable"])
         self.assertFalse(d["projects"][0]["sessions"][1]["usable"])
 
-    def test_selection_refuses_real_projects(self):
-        pairs, problems = catalog.resolve_selection(DATA, [S[0], S[2], "missing"])
-        self.assertEqual([s["id"] for _, s in pairs], [S[0]])
-        self.assertEqual(len(problems), 2)
-        pairs, problems = catalog.resolve_selection(DATA, [S[2], S[0]], allow_real=[PID2])
-        self.assertEqual([s["id"] for _, s in pairs], [S[2], S[0]])          # order kept
-        self.assertEqual(problems, [])
+    def test_every_project_can_be_used_by_default(self):
+        with mock.patch.object(catalog, "load_settings", lambda path=None: {}):
+            self.assertFalse(catalog.protect_enabled())
+            pairs, problems = catalog.resolve_selection(DATA, [S[0], S[2], "missing"])
+            self.assertEqual([s["id"] for _, s in pairs], [S[0], S[2]])          # the Test build is a test environment: all projects are fine
+            self.assertEqual(len(problems), 1)                                   # only the id that does not exist is reported
+            decorated = catalog.decorate(DATA)
+            self.assertTrue(all(p["is_test"] for p in decorated["projects"]))
+            self.assertFalse(decorated["protected"])
+
+    def test_protect_real_projects_is_an_optional_switch(self):
+        with mock.patch.object(catalog, "load_settings", lambda path=None: {"protect_projects": True}):
+            self.assertTrue(catalog.protect_enabled())
+            pairs, problems = catalog.resolve_selection(DATA, [S[0], S[2], "missing"])
+            self.assertEqual([s["id"] for _, s in pairs], [S[0]])
+            self.assertEqual(len(problems), 2)
+            pairs, problems = catalog.resolve_selection(DATA, [S[2], S[0]], allow_real=[PID2])
+            self.assertEqual([s["id"] for _, s in pairs], [S[2], S[0]])          # order kept; 'use anyway' still works
+            self.assertTrue(catalog.decorate(DATA)["protected"])
 
     def test_random_pick(self):
-        ids = catalog.pick_random(DATA, 5, random.Random(1))
-        self.assertEqual(ids, [S[0]])                      # only usable sessions of test projects
-        self.assertEqual(catalog.pick_random(DATA, 5, random.Random(1)), ids)
+        with mock.patch.object(catalog, "load_settings", lambda path=None: {}):
+            ids = catalog.pick_random(DATA, 5, random.Random(1))
+            self.assertEqual(sorted(ids), sorted([S[0], S[2]]))                   # every usable session of every project
+            self.assertEqual(catalog.pick_random(DATA, 5, random.Random(1)), ids)
+        with mock.patch.object(catalog, "load_settings", lambda path=None: {"protect_projects": True}):
+            self.assertEqual(catalog.pick_random(DATA, 5, random.Random(1)), [S[0]])   # only test projects when protection is on
 
     def test_fuzzy_session(self):
         r = catalog.find_session(DATA, "auditions nov 4")
@@ -94,3 +110,23 @@ class Limit(unittest.TestCase):
         self.assertEqual(list(collect.first_projects(seen, 2)), ["p1", "p2"])
         self.assertEqual(list(collect.first_projects(seen, 0)), ["p1", "p2", "p3", "p4"])
         self.assertEqual(list(collect.first_projects(seen, 10)), ["p1", "p2", "p3", "p4"])
+
+
+class SmokeSessionChoiceTest(unittest.TestCase):
+    def test_prefers_a_session_with_talents(self):
+        from suites import smoke
+        from unittest import mock
+        data = {"projects": [{"sessions": [{"name": "Empty", "talents": []}, {"name": "Full", "talents": [{"id": "t"}]}]}]}
+        with mock.patch("tester.catalog.load", return_value=data):
+            self.assertEqual(smoke.session_with_talents(), "Full")
+        with mock.patch("tester.catalog.load", return_value={"projects": []}):
+            self.assertEqual(smoke.session_with_talents(), "November 04")
+
+
+class CatalogPathTest(unittest.TestCase):
+    def test_load_and_save_follow_a_patched_path_never_the_real_file(self):
+        with tempfile.TemporaryDirectory() as folder:
+            with mock.patch.object(catalog, "PATH", os.path.join(folder, "c.json")):
+                catalog.save({"projects": [{"id": "x"}]})
+                self.assertEqual(catalog.load()["projects"][0]["id"], "x")
+            self.assertTrue(os.path.exists(os.path.join(folder, "c.json")))

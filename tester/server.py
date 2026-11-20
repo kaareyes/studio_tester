@@ -21,7 +21,7 @@ import suites  # noqa: E402
 current = {"run": None}
 LOADED_VERSION = updater.local_version()      # the version of the code THIS running program was started with (the VERSION file can change on disk later)
 OPTION_KEYS = ("picked", "allow_real", "auditions", "rounds", "hours", "profile", "mix", "mode", "seed", "presets", "sample_image",
-               "sample_video", "sessions", "auditions_text")
+               "sample_video", "sessions", "auditions_text", "extra", "only", "unverified")
 
 
 class CollectJob:
@@ -63,7 +63,7 @@ collect_job = CollectJob()
 
 def estimate_text(suite, options):
     """(text, problem sentence or None, blocking) for the page: how long, how much disk, and what is missing."""
-    problem = suite_problem(suite)
+    problem = suite_problem(suite, options)
     if problem:
         return "", problem, True
     try:
@@ -81,11 +81,17 @@ def estimate_text(suite, options):
     needs_sessions = suite in suites.RECORDING
     if needs_sessions and not picked:
         return "", "Tick at least one session first (collect the projects, then tick sessions).", True
-    if suite in ("realistic", "long_video"):
+    if suite == "day":
+        e = profiles.estimate((4 + 3) * 2.2, "normal", None)              # 4 template auditions + 3 random ones; the long one has 1-5 minute takes
+        e["seconds"] += 7 * 90                                            # photos, slates, finalize, the internet drop and the offline sync
+    elif suite in ("realistic", "long_video"):
         takes = len(picked) * per * 2.2
         e = profiles.estimate(takes, "long" if suite == "long_video" and profile not in ("long", "mixed") else profile, mix)
-    elif suite in ("chaos", "network", "recovery", "friday"):
-        e = profiles.estimate(rounds if suite == "chaos" else 12, "short", mix)
+    elif suite == "chaos":
+        e = profiles.estimate(rounds * 1.3, profile, mix)                  # about 1.3 takes per scenario, of the chosen length
+        e["seconds"] += rounds * 60                                        # plus the app restarts, offline waits and relaunches
+    elif suite in ("network", "recovery", "friday"):
+        e = profiles.estimate(12, "short", mix)
     elif suite == "soak":
         e = {"seconds": int(hours * 3600), "disk_mb": int(hours * 3600 * 0.55 * 0.5)}
     elif suite == "offline_load":
@@ -181,7 +187,12 @@ def support_problem(path):
     return None
 
 
-def suite_problem(suite):
+# Suites that have not been verified on the real app yet: switched off on the page and refused by the server, so a tester who is not
+# a developer cannot start something that may fail or hang. A developer can still run them through the API with options.unverified = "yes".
+NOT_VERIFIED_SUITES = ("chaos", "offline_load", "long_video", "soak", "friday")
+
+
+def suite_problem(suite, options=None):
     """A plain sentence when the chosen app cannot run this suite, else None."""
     path = chosen["path"]
     if not path:
@@ -190,6 +201,8 @@ def suite_problem(suite):
         problem = support_problem(path)
         if problem:
             return problem
+    if suite in NOT_VERIFIED_SUITES and str((options or {}).get("unverified") or "").lower() != "yes":
+        return "This suite has not been verified on the real app yet, so it is switched off for now (the ready ones are: Real audition day, Quick check, Normal)."
     kind = runner.kind_of(path)
     if suite not in READ_ONLY_SUITES and kind != "test":
         return (f"This test records auditions and needs the Test build's test tools. You chose Studio ({KIND_LABEL[kind]}). "
@@ -291,7 +304,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/api/info":
             return self.send(json.dumps({"builds": find_builds(), "cameras": cameras.list_cameras(),
                                          "suites": {key: [value[0], value[1]] for key, value in suites.SUITES.items()},
-                                         "setup": setup_check.checks(), "words_extra": catalog.load_settings().get("test_words", [])}))
+                                         "setup": setup_check.checks(), "words_extra": catalog.load_settings().get("test_words", []), "protect_projects": catalog.protect_enabled()}))
         if self.path == "/guide.pdf":
             guide = os.path.join(runner.ROOT, "docs", "Studio_Tester_Guide.pdf")
             if os.path.isfile(guide):
@@ -393,6 +406,7 @@ class Handler(BaseHTTPRequestHandler):
             words = [str(w)[:40] for w in (body.get("test_words") or [])][:50]
             values = catalog.load_settings()
             values["test_words"] = words
+            values["protect_projects"] = bool(body.get("protect_projects", values.get("protect_projects", False)))
             catalog.save_settings(values)
             return self.send("{}")
         if self.path == "/api/refresh-apps":
@@ -596,6 +610,10 @@ def main():
         print(f"(Port {PORT} is used by another program, so the tester uses {port}.)")
     print(f"Studio Tester is running. The page: {url}\nKeep this window open while testing. Close it to stop.")
     threading.Timer(1.0, lambda: webbrowser.open(url)).start()
+    if control.release_stuck_esc():
+        print("(Esc was reported as held down when the tester started: it was released.)")
+    if not control.keyboard_watch_allowed():
+        print("Holding Esc cannot pause a test yet: allow 'Terminal' in System Settings > Privacy & Security > Input Monitoring, then restart.")
     control.start_esc_watcher(lambda: bool(current["run"] and not current["run"].finished), lambda: esc_pause(port))
     _running["server"] = server
     try:

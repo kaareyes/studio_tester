@@ -17,6 +17,16 @@ def checks():
                                    "and switch ON 'Terminal'. Then run this setup again."))
     except Exception as error:
         results.append((False, f"The test tools are not installed correctly ({type(error).__name__}). Run the setup again."))
+    try:
+        from . import control
+        import Quartz
+        if Quartz.CGPreflightListenEventAccess():
+            results.append((True, "Input Monitoring permission is on (holding Esc pauses the test while any app is in front)."))
+        else:
+            results.append((False, "Input Monitoring permission is off, so holding Esc will NOT pause a test while another app is in front. "
+                                   "Open System Settings > Privacy & Security > Input Monitoring and switch ON 'Terminal'. Then restart the tester."))
+    except Exception:
+        pass
     found = cameras.list_cameras()
     if not found:
         results.append((False, "No camera was found. Connect a camera (or open the lid) and run this setup again."))

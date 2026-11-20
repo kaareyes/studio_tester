@@ -48,8 +48,22 @@ def _merge(projects, found):
         entry["sessions"].update(info["sessions"])
 
 
+def load_all_talents(app, limit=40):
+    """The talent list is paged: press 'Load more' until it is gone. Returns True when the whole list is loaded, False when it still has
+    more (then the session's talent list is marked incomplete instead of looking complete)."""
+    for _ in range(limit):
+        if not app.exists("session.talents.loadMore"):
+            return True
+        try:
+            app.press("session.talents.loadMore", timeout=3)
+        except Exception:
+            return False
+        time.sleep(1.5)
+    return not app.exists("session.talents.loadMore")
+
+
 def read_talents(app):
-    """Names of the talents scheduled in the open session."""
+    """Names of the talents scheduled in the open session (call load_all_talents first: the list is paged)."""
     talents = {}
     for element in app.find_all(prefix="session.talent."):
         parts = (ax._attr(element, "AXIdentifier") or "").split(".")
@@ -106,8 +120,11 @@ def run(app, log, progress=None, stop=lambda: False, read_sessions=True, max_scr
             progress(f"Reading talents: session {number} of {len(todo)} ({name})")
             try:
                 common.open_session_by_id(app, sid, name)
+                entry["talents_complete"] = load_all_talents(app)
                 entry["talents"] = read_talents(app)
                 entry["talents_read"] = True
+                if not entry["talents_complete"]:
+                    log(f"'{name}' has more talents than were loaded: its talent list is marked incomplete")
             except Exception as error:                # a session that cannot be opened stays listed, marked unread
                 log(f"could not read the talents of '{name}': {error}")
             finally:
